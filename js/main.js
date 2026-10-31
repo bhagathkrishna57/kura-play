@@ -251,28 +251,40 @@ class ArcadeHub {
             this.showHub();
         });
 
-        document.getElementById('open-party-btn').addEventListener('click', () => {
-            if (window.KuraSounds) window.KuraSounds.playClick();
-            this.openPartyModal();
-        });
-
-        document.getElementById('close-party-modal').addEventListener('click', () => {
-            if (window.KuraSounds) window.KuraSounds.playClick();
-            this.partyModal.classList.remove('active');
-        });
-
-        document.getElementById('btn-create-room').addEventListener('click', () => {
-            if (window.KuraSounds) window.KuraSounds.playClick();
-            this.createPartyRoom();
-        });
-
-        document.getElementById('btn-join-room').addEventListener('click', () => {
-            const input = document.getElementById('join-room-input');
-            if (input && input.value) {
+        const openPartyBtn = document.getElementById('open-party-btn');
+        if (openPartyBtn) {
+            openPartyBtn.addEventListener('click', () => {
                 if (window.KuraSounds) window.KuraSounds.playClick();
-                this.joinPartyRoom(input.value);
-            }
-        });
+                this.openPartyModal();
+            });
+        }
+
+        const closePartyBtn = document.getElementById('close-party-modal');
+        if (closePartyBtn) {
+            closePartyBtn.addEventListener('click', () => {
+                if (window.KuraSounds) window.KuraSounds.playClick();
+                if (this.partyModal) this.partyModal.classList.remove('active');
+            });
+        }
+
+        const btnCreateRoom = document.getElementById('btn-create-room');
+        if (btnCreateRoom) {
+            btnCreateRoom.addEventListener('click', () => {
+                if (window.KuraSounds) window.KuraSounds.playClick();
+                this.createPartyRoom();
+            });
+        }
+
+        const btnJoinRoom = document.getElementById('btn-join-room');
+        if (btnJoinRoom) {
+            btnJoinRoom.addEventListener('click', () => {
+                const input = document.getElementById('join-room-input');
+                if (input && input.value) {
+                    if (window.KuraSounds) window.KuraSounds.playClick();
+                    this.joinPartyRoom(input.value);
+                }
+            });
+        }
 
         if (this.playerNameInput) {
             this.playerNameInput.addEventListener('change', () => {
@@ -476,6 +488,7 @@ class ArcadeHub {
     }
 
     openPartyModal() {
+        if (!this.partyModal) return;
         this.partyModal.classList.add('active');
         const displayCode = document.getElementById('display-room-code');
         if (window.KuraMultiplayer && window.KuraMultiplayer.roomId) {

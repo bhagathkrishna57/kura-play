@@ -5,11 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="Bhagath Krishna.M">
     <title>KURA // The Anti-Boredom Cyber Arcade</title>
-    <link rel="stylesheet" href="css/style.css?v=3.0">
-    <link rel="stylesheet" href="css/animations.css?v=3.0">
-    <link rel="stylesheet" href="css/games.css?v=3.0">
-    <!-- PeerJS for seamless WebRTC multiplayer room lobbies -->
-    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <link rel="stylesheet" href="css/style.css?v=3.2">
+    <link rel="stylesheet" href="css/animations.css?v=3.2">
+    <link rel="stylesheet" href="css/games.css?v=3.2">
 </head>
 <body>
     <!-- Interactive Cursor & Particle Starfield Canvas -->
@@ -40,9 +38,6 @@
                 </a>
                 <button class="btn-nav btn-skip-tactical" id="global-skip-btn" title="Skip to a new game instantly (Press 'N')">
                     <span>⏭</span> JUMP SECTOR <span style="font-size: 10px; opacity: 0.7;">[N]</span>
-                </button>
-                <button class="btn-nav" id="open-party-btn">
-                    <span>👥</span> PARTY LOBBY
                 </button>
                 <button class="btn-nav btn-leaderboard-nav" id="open-leaderboard-btn" title="View Global Server Leaderboard [Press L]">
                     <span>🏆</span> GLOBAL LEADERBOARD <span class="nav-shortcut">[L]</span>
@@ -261,44 +256,6 @@
         </section>
     </div>
 
-    <!-- Party Room Lobby Modal -->
-    <div class="modal-overlay" id="party-modal">
-        <div class="modal-box">
-            <button class="modal-close" id="close-party-modal">✕</button>
-            <h2 class="modal-title">Party Lobby</h2>
-            <p class="modal-subtitle">Connect with friends via WebRTC room codes to battle and compete on the live leaderboard.</p>
-
-            <div class="input-group">
-                <label class="input-label">YOUR CALLSIGN</label>
-                <input type="text" id="player-name-input" class="text-input" placeholder="Enter username">
-            </div>
-
-            <div class="room-code-display" id="room-code-box">
-                <div>
-                    <div style="font-size: 11px; color: var(--text-muted);">ACTIVE ROOM CODE</div>
-                    <div class="room-code-text" id="display-room-code">NOT HOSTING</div>
-                </div>
-                <button class="btn-copy-code" id="btn-create-room">CREATE ROOM</button>
-            </div>
-
-            <div class="input-group">
-                <label class="input-label">JOIN A FRIEND'S ROOM</label>
-                <div style="display: flex; gap: 8px;">
-                    <input type="text" id="join-room-input" class="text-input" placeholder="e.g. KURA-782">
-                    <button class="btn-nav" id="btn-join-room" style="white-space: nowrap;">JOIN</button>
-                </div>
-            </div>
-
-            <label class="input-label">PLAYERS IN LOBBY (<span id="player-count">1</span>)</label>
-            <div class="peers-list" id="peers-list-container">
-                <div class="peer-chip">
-                    <span id="local-peer-name">You (Host)</span>
-                    <span style="color: var(--neon-green); font-size: 11px;">READY</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Pilot Authentication Modal (Login / Register) -->
     <div class="modal-overlay" id="pilot-modal">
         <div class="modal-box pilot-auth-box">
@@ -388,7 +345,7 @@
             <div class="lb-header-row">
                 <div>
                     <h2 class="modal-title">🏆 Global Leaderboard // Live Rankings</h2>
-                    <p class="modal-subtitle">Live verified records across all connected pilots.</p>
+                    <p class="modal-subtitle">Live verified scores across all connected pilots.</p>
                 </div>
                 <div class="lb-pilot-badge" id="lb-current-pilot-tag">
                     <span class="led-status"></span>
@@ -434,7 +391,7 @@
                         <tr>
                             <th style="width: 15%;">RANK</th>
                             <th style="width: 45%;">PILOT CALLSIGN</th>
-                            <th style="width: 25%;">RECORD STAT</th>
+                            <th style="width: 25%;">SCORE</th>
                             <th style="width: 15%;">VERIFIED</th>
                         </tr>
                     </thead>
@@ -447,16 +404,16 @@
     </div>
 
     <!-- Core Architecture Scripts (Runs directly in browser via file:/// or http://) -->
-    <script src="js/sound.js?v=3.1"></script>
-    <script src="js/site-loader.js?v=3.1"></script>
-    <script src="js/server-client.js?v=3.1"></script>
-    <script src="js/leaderboard.js?v=3.1"></script>
-    <script src="js/multiplayer.js?v=3.1"></script>
-    <script src="js/games/aim-matrix.js?v=3.1"></script>
-    <script src="js/games/neon-dash.js?v=3.1"></script>
-    <script src="js/games/flash-reflex.js?v=3.1"></script>
-    <script src="js/games/cyber-slicer.js?v=3.1"></script>
-    <script src="js/card-previews.js?v=3.1"></script>
-    <script src="js/main.js?v=3.1"></script>
+    <script src="js/sound.js?v=3.2"></script>
+    <script src="js/site-loader.js?v=3.2"></script>
+    <script src="js/server-client.js?v=3.2"></script>
+    <script src="js/leaderboard.js?v=3.2"></script>
+    <script src="js/multiplayer.js?v=3.2"></script>
+    <script src="js/games/aim-matrix.js?v=3.2"></script>
+    <script src="js/games/neon-dash.js?v=3.2"></script>
+    <script src="js/games/flash-reflex.js?v=3.2"></script>
+    <script src="js/games/cyber-slicer.js?v=3.2"></script>
+    <script src="js/card-previews.js?v=3.2"></script>
+    <script src="js/main.js?v=3.2"></script>
 </body>
 </html>
