@@ -164,7 +164,8 @@ class FlashReflexGame {
 
         setTimeout(() => {
             if (this.onEnd) {
-                this.onEnd({ won, title, score: scoreText });
+                const numericScore = this.mode === 'solo' ? Math.round(this.reactionTime || 9999) : Math.round(this.player1Time || 9999);
+                this.onEnd({ won, title, score: scoreText, numericScore });
             }
         }, 1200);
     }

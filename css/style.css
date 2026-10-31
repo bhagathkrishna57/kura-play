@@ -11,8 +11,10 @@
     
     /* Tactical High-Contrast Palette */
     --neon-emerald: #00F5A0;
+    --neon-green: #00F5A0;
     --neon-cyan: #00D9F5;
     --neon-crimson: #FF2E55;
+    --neon-coral: #FF2E55;
     --neon-amber: #FFB800;
     --neon-violet: #A855F7;
     
@@ -816,6 +818,77 @@ header.arcade-nav {
     box-shadow: 0 0 20px rgba(0, 217, 245, 0.3);
 }
 
+/* Google Sign-In Integration */
+.google-auth-container {
+    margin-bottom: 20px;
+}
+
+.btn-google-auth {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: #131722;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #FFFFFF;
+    padding: 12px 18px;
+    border-radius: var(--radius-hud);
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.25s var(--ease-cinematic);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.btn-google-auth:hover {
+    background: #1C2233;
+    border-color: #4285F4;
+    box-shadow: 0 0 20px rgba(66, 133, 244, 0.35);
+    transform: translateY(-2px);
+}
+
+.btn-google-auth:active {
+    transform: translateY(0);
+}
+
+.google-auth-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin-top: 16px;
+    margin-bottom: 4px;
+}
+
+.google-auth-divider::before,
+.google-auth-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.google-auth-divider span {
+    padding: 0 12px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--text-technical);
+}
+
+.gate-actions-row {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 320px;
+    margin: 0 auto;
+}
+
+.gate-google-btn {
+    padding: 12px 20px;
+}
+
 .auth-tab-bar {
     display: flex;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -989,19 +1062,23 @@ header.arcade-nav {
 
 /* Game Over Server Status */
 .go-server-status-pill {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
     background: rgba(0, 217, 245, 0.08);
     border: 1px solid rgba(0, 217, 245, 0.25);
-    padding: 8px 16px;
-    border-radius: 20px;
+    padding: 8px 18px;
+    border-radius: 30px;
     font-family: var(--font-mono);
     font-size: 11px;
     color: var(--neon-cyan);
-    margin-bottom: 20px;
-    letter-spacing: 1px;
+    margin: 0 auto 20px auto;
+    letter-spacing: 0.5px;
+    max-width: 90%;
+    text-align: center;
+    line-height: 1.4;
+    transition: all 0.25s ease;
 }
 
 .go-server-status-pill.saved {
@@ -1015,6 +1092,13 @@ header.arcade-nav {
     border-color: var(--neon-amber);
     color: var(--neon-amber);
     cursor: pointer;
+}
+
+.go-server-status-pill.prompt:hover {
+    background: rgba(255, 184, 0, 0.2);
+    border-color: var(--neon-amber);
+    box-shadow: 0 0 15px rgba(255, 184, 0, 0.4);
+    transform: translateY(-1px);
 }
 
 /* ========================================================= */

@@ -251,7 +251,8 @@ class NeonDashGame {
                 this.onEnd({
                     won: false,
                     title: isNewRecord ? 'NEW HIGH SCORE!' : 'CRASHED!',
-                    score: `DISTANCE: ${this.score}m (BEST: ${stats.highScore}m)`
+                    score: `DISTANCE: ${this.score}m (BEST: ${stats.highScore}m)`,
+                    numericScore: this.score
                 });
             }
         }, 800);

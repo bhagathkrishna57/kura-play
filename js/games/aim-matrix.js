@@ -273,7 +273,8 @@ class AimMatrixGame {
                 this.onEnd({
                     won: accuracy >= 70,
                     title: isNewRecord ? `NEW RECORD: ${this.score} PTS!` : `${rank}!`,
-                    score: `SCORE: ${this.score} | ACCURACY: ${accuracy}% | HITS: ${this.shotsHit}/${this.shotsFired}`
+                    score: `SCORE: ${this.score} | ACCURACY: ${accuracy}% | HITS: ${this.shotsHit}/${this.shotsFired}`,
+                    numericScore: this.score
                 });
             }
         }, 600);

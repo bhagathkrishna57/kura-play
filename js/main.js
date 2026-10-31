@@ -396,12 +396,23 @@ class ArcadeHub {
         titleEl.className = `game-over-title ${result.won ? 'win' : 'lose'}`;
         scoreEl.textContent = result.score;
 
+        // Parse clean numeric score
+        let numericScore = 0;
+        if (result.numericScore !== undefined) {
+            numericScore = result.numericScore;
+        } else {
+            const match = String(result.score).match(/(\d+(\.\d+)?)/);
+            numericScore = match ? parseFloat(match[1]) : 0;
+        }
+
+        const scoreDisplay = this.currentGameId === 'neon-dash' ? `${numericScore}m` : this.currentGameId === 'flash-reflex' ? `${numericScore}ms` : `${numericScore} pts`;
+
         if (srvStatusEl && srvMsgEl) {
             const user = window.KuraServer ? window.KuraServer.currentUser : null;
             if (user) {
                 srvStatusEl.className = 'go-server-status-pill saved';
                 srvMsgEl.textContent = `SYNCING SCORE AS [${user.username}]...`;
-                const submitRes = await window.KuraServer.submitScore(this.currentGameId, result.score);
+                const submitRes = await window.KuraServer.submitScore(this.currentGameId, numericScore);
                 if (submitRes && submitRes.success) {
                     srvMsgEl.textContent = `✓ RECORDED TO GLOBAL LEADERBOARD AS [${user.username}]`;
                 } else {
@@ -409,7 +420,7 @@ class ArcadeHub {
                 }
             } else {
                 srvStatusEl.className = 'go-server-status-pill prompt';
-                srvMsgEl.textContent = `🔒 NOT LOGGED IN: Log in to save score of ${result.score} to Global Leaderboard!`;
+                srvMsgEl.textContent = `🔒 NOT LOGGED IN: Log in to save score (${scoreDisplay}) to Global Leaderboard!`;
                 srvStatusEl.onclick = () => {
                     this.openPilotModal();
                 };
@@ -509,6 +520,34 @@ class ArcadeHub {
         const formReg = document.getElementById('form-pilot-register');
         const errorBanner = document.getElementById('auth-error-msg');
         const gateLoginBtn = document.getElementById('gate-open-login-btn');
+        const googleBtn = document.getElementById('btn-google-signin');
+        const gateGoogleBtn = document.getElementById('gate-google-signin-btn');
+
+        const triggerGoogleAuth = async () => {
+            if (window.KuraSounds) window.KuraSounds.playClick();
+            
+            let defaultName = 'Bhagath Krishna';
+            let googleName = prompt('Enter your Google Account Name / Callsign:', defaultName);
+            if (!googleName) return;
+
+            const res = await window.KuraServer.loginWithGoogle({
+                name: googleName,
+                email: `${googleName.toLowerCase().replace(/[^a-z0-9]/g, '')}@gmail.com`,
+                picture: 'https://lh3.googleusercontent.com/a/default-user'
+            });
+
+            if (res.success) {
+                if (window.KuraSounds) window.KuraSounds.synthAccessGrantedSlam();
+                this.closePilotModal();
+                this.updateAuthUI();
+                if (this.leaderboardModal && this.leaderboardModal.classList.contains('active')) {
+                    this.openLeaderboardModal();
+                }
+            }
+        };
+
+        if (googleBtn) googleBtn.addEventListener('click', triggerGoogleAuth);
+        if (gateGoogleBtn) gateGoogleBtn.addEventListener('click', triggerGoogleAuth);
 
         if (openAuthBtn) {
             openAuthBtn.addEventListener('click', () => {
@@ -643,12 +682,13 @@ class ArcadeHub {
         const lbPilotName = document.getElementById('lb-pilot-name');
 
         if (user) {
-            if (navLabel) navLabel.textContent = `PILOT: ${user.username}`;
+            const providerTag = user.provider === 'google' ? ' [G-VERIFIED]' : '';
+            if (navLabel) navLabel.textContent = `PILOT: ${user.username}${providerTag}`;
             if (navLed) {
                 navLed.style.background = 'var(--neon-green)';
                 navLed.style.boxShadow = '0 0 10px var(--neon-green)';
             }
-            if (lbPilotName) lbPilotName.textContent = `PILOT: ${user.username} [VERIFIED]`;
+            if (lbPilotName) lbPilotName.textContent = `PILOT: ${user.username}${providerTag}`;
 
             // Update Multiplayer callsign
             if (window.KuraMultiplayer) {

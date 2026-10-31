@@ -177,19 +177,29 @@
 }
 
 .btn-retry {
-    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-green));
+    background: linear-gradient(135deg, #00D9F5, #00F5A0);
     border: none;
-    color: #07080C;
-    font-weight: 800;
+    color: #030406 !important;
+    font-family: var(--font-ui, 'Space Grotesk', sans-serif);
+    font-weight: 900;
     font-size: 15px;
-    padding: 13px;
-    border-radius: var(--radius-md);
+    letter-spacing: 1px;
+    padding: 14px 22px;
+    border-radius: var(--radius-hud, 8px);
     cursor: pointer;
-    transition: all 0.2s;
+    box-shadow: 0 0 25px rgba(0, 245, 160, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.25s ease;
 }
 
 .btn-retry:hover {
-    box-shadow: 0 0 20px rgba(0, 245, 160, 0.5);
+    background: #00F5A0;
+    box-shadow: 0 0 35px rgba(0, 245, 160, 0.9);
+    transform: translateY(-2px);
+    color: #030406 !important;
 }
 
 .btn-next-game {

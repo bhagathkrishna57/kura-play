@@ -197,6 +197,44 @@ const server = http.createServer(async (req, res) => {
         });
     }
 
+    // Google Sign-In Endpoint
+    if (pathname === '/api/auth/google' && req.method === 'POST') {
+        const { email, name, picture } = await parseBody(req);
+        if (!email && !name) {
+            return sendJSON(res, 400, { error: 'Google profile data is required.' });
+        }
+
+        const rawName = (name || email.split('@')[0]).trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '_');
+        const cleanUser = rawName.slice(0, 16) || 'GOOGLE_PILOT';
+
+        if (!users[cleanUser]) {
+            users[cleanUser] = {
+                username: cleanUser,
+                email: email || '',
+                provider: 'google',
+                picture: picture || '',
+                sector: 'GLOBAL PILOT',
+                verified: true,
+                createdAt: new Date().toISOString().split('T')[0]
+            };
+            saveJSON(USERS_FILE, users);
+        }
+
+        const token = crypto.randomBytes(24).toString('hex');
+        return sendJSON(res, 200, {
+            success: true,
+            user: {
+                username: cleanUser,
+                email: email || '',
+                picture: picture || users[cleanUser].picture || '',
+                provider: 'google',
+                sector: users[cleanUser].sector,
+                verified: true
+            },
+            token
+        });
+    }
+
     // Get Leaderboard
     if (pathname === '/api/leaderboard' && req.method === 'GET') {
         const gameId = url.searchParams.get('game');

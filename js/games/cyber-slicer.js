@@ -343,7 +343,7 @@ class CyberSlicerGame {
                 this.onEnd({
                     won: this.score > 2500,
                     title: isNewRecord ? `NEW RECORD: ${this.score} PTS!` : 'BLADE OVERHEATED!',
-                    score: `FINAL SCORE: ${this.score} | (BEST: ${stats.highScore})`
+                    score: `FINAL SCORE: ${this.score} | (BEST: ${stats.highScore})`, numericScore: this.score
                 });
             }
         }, 700);

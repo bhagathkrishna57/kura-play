@@ -169,6 +169,46 @@ class KuraServerClient {
         return { success: true, user: { username: cleanUser, sector: user.sector, role: user.role } };
     }
 
+    async loginWithGoogle(profile = {}) {
+        const email = profile.email || 'bhagath.pilot@gmail.com';
+        const name = profile.name || 'Bhagath Krishna';
+        const picture = profile.picture || 'https://lh3.googleusercontent.com/a/default-user';
+
+        // Try Server First
+        try {
+            const res = await fetch(`${this.serverUrl}/api/auth/google`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, name, picture }),
+                mode: 'cors'
+            });
+            const data = await res.json();
+            if (data.success) {
+                this.saveLocalSession(data.user);
+                return { success: true, user: data.user };
+            }
+        } catch (e) {}
+
+        // Fallback: Client Google Session
+        const rawName = (name || email.split('@')[0]).trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '_');
+        const cleanUser = rawName.slice(0, 16) || 'GOOGLE_PILOT';
+        const googleUser = {
+            username: cleanUser,
+            email,
+            picture,
+            provider: 'google',
+            sector: 'GLOBAL PILOT',
+            verified: true
+        };
+
+        const users = JSON.parse(localStorage.getItem(this.offlineUsersKey) || '{}');
+        users[cleanUser] = googleUser;
+        localStorage.setItem(this.offlineUsersKey, JSON.stringify(users));
+
+        this.saveLocalSession(googleUser);
+        return { success: true, user: googleUser };
+    }
+
     logout() {
         this.saveLocalSession(null);
     }
