@@ -195,6 +195,13 @@ class ArcadeHub {
                 }
             }
 
+            // L to open Global Leaderboard anytime
+            if (e.key === 'l' || e.key === 'L') {
+                e.preventDefault();
+                this.openLeaderboardModal();
+                return;
+            }
+
             // Space / Enter to Try Again when game over screen is showing
             if (e.code === 'Space' || e.key === ' ' || e.code === 'Enter') {
                 if (this.roundOverOverlay && this.roundOverOverlay.classList.contains('active')) {
@@ -273,9 +280,14 @@ class ArcadeHub {
             });
         }
 
-        document.getElementById('open-leaderboard-btn').addEventListener('click', () => {
-            if (window.KuraSounds) window.KuraSounds.playClick();
-            this.openLeaderboardModal();
+        ['open-leaderboard-btn', 'hub-open-lb-btn', 'go-leaderboard-btn', 'hud-lb-btn'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    if (window.KuraSounds) window.KuraSounds.playClick();
+                    this.openLeaderboardModal();
+                });
+            }
         });
 
         document.getElementById('close-leaderboard-modal').addEventListener('click', () => {
@@ -422,6 +434,11 @@ class ArcadeHub {
                 } else {
                     srvMsgEl.textContent = `SCORE RECORDED AS [${user.username}]`;
                 }
+                srvStatusEl.style.cursor = 'pointer';
+                srvStatusEl.title = 'Click to open Global Leaderboard [L]';
+                srvStatusEl.onclick = () => {
+                    this.openLeaderboardModal();
+                };
             } else {
                 srvStatusEl.className = 'go-server-status-pill prompt';
                 if (srvIconEl) srvIconEl.textContent = '🔒';
@@ -729,6 +746,18 @@ class ArcadeHub {
         if (!this.leaderboardModal) return;
         this.leaderboardModal.classList.add('active');
         if (window.KuraSounds) window.KuraSounds.playClick();
+
+        if (this.currentGameId) {
+            this.currentLbSector = this.currentGameId;
+            const lbTabs = document.querySelectorAll('.lb-tab');
+            lbTabs.forEach(tab => {
+                if (tab.getAttribute('data-game') === this.currentLbSector) {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+        }
 
         const user = window.KuraServer ? window.KuraServer.currentUser : null;
         const authGate = document.getElementById('lb-auth-gate');

@@ -1112,6 +1112,201 @@ header.arcade-nav {
 }
 
 /* ========================================================= */
+/* GLOBAL LEADERBOARD SHOWCASE & ACCENTS                    */
+/* ========================================================= */
+.hub-leaderboard-card {
+    position: relative;
+    background: linear-gradient(135deg, rgba(16, 24, 38, 0.8), rgba(8, 12, 20, 0.95));
+    border: 1px solid rgba(255, 184, 0, 0.3);
+    border-radius: var(--radius-card);
+    padding: 24px 32px;
+    margin: 32px 0 20px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 184, 0, 0.2);
+    overflow: hidden;
+    transition: all 0.3s var(--ease-cinematic);
+}
+
+.hub-leaderboard-card:hover {
+    border-color: rgba(255, 184, 0, 0.7);
+    box-shadow: 0 15px 50px rgba(255, 184, 0, 0.18), inset 0 1px 0 rgba(255, 184, 0, 0.4);
+    transform: translateY(-2px);
+}
+
+.hlb-glow-accent {
+    position: absolute;
+    top: -50px;
+    right: 20%;
+    width: 250px;
+    height: 150px;
+    background: radial-gradient(circle, rgba(255, 184, 0, 0.15) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.hlb-content {
+    flex: 1;
+    z-index: 1;
+}
+
+.hlb-meta-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--neon-amber);
+    letter-spacing: 1.5px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.trophy-pulse {
+    display: inline-block;
+    animation: pulse-scale 2s infinite ease-in-out;
+}
+
+@keyframes pulse-scale {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); filter: drop-shadow(0 0 8px #FFB800); }
+}
+
+.hlb-title {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: #FFFFFF;
+    margin-bottom: 6px;
+}
+
+.hlb-desc {
+    color: var(--text-dim);
+    font-size: 13px;
+    line-height: 1.5;
+    max-width: 650px;
+    margin-bottom: 14px;
+}
+
+.hlb-features-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.hlb-pill {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-pure);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 4px 12px;
+    border-radius: 20px;
+}
+
+.hlb-cta-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    z-index: 1;
+}
+
+.btn-global-lb-cta {
+    background: linear-gradient(135deg, #FFB800, #FF8C00);
+    border: none;
+    color: #030406;
+    font-family: var(--font-ui);
+    font-weight: 900;
+    font-size: 14px;
+    letter-spacing: 1px;
+    padding: 14px 26px;
+    border-radius: var(--radius-hud);
+    cursor: pointer;
+    box-shadow: 0 0 25px rgba(255, 184, 0, 0.45);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-transform: uppercase;
+    transition: all 0.25s ease;
+    white-space: nowrap;
+}
+
+.btn-global-lb-cta:hover {
+    background: #FFB800;
+    box-shadow: 0 0 35px rgba(255, 184, 0, 0.85);
+    transform: translateY(-2px);
+    color: #000000;
+}
+
+.hlb-shortcut-hint {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-dim);
+}
+
+.hlb-shortcut-hint strong {
+    color: var(--neon-amber);
+}
+
+/* Nav & HUD Leaderboard Button Accents */
+.btn-leaderboard-nav {
+    border-color: rgba(255, 184, 0, 0.4) !important;
+    color: #FFB800 !important;
+}
+
+.btn-leaderboard-nav:hover {
+    border-color: #FFB800 !important;
+    background: rgba(255, 184, 0, 0.15) !important;
+    box-shadow: 0 0 15px rgba(255, 184, 0, 0.4) !important;
+}
+
+.nav-shortcut {
+    font-size: 10px;
+    opacity: 0.7;
+    margin-left: 2px;
+}
+
+.btn-lb-accent {
+    border-color: rgba(255, 184, 0, 0.5) !important;
+    color: #FFB800 !important;
+}
+
+.btn-lb-accent:hover {
+    border-color: #FFB800 !important;
+    background: rgba(255, 184, 0, 0.15) !important;
+    box-shadow: 0 0 15px rgba(255, 184, 0, 0.4) !important;
+}
+
+.hud-btn.lb-highlight {
+    border-color: rgba(255, 184, 0, 0.4);
+    color: #FFB800;
+}
+
+.hud-btn.lb-highlight:hover {
+    border-color: #FFB800;
+    background: rgba(255, 184, 0, 0.2);
+    box-shadow: 0 0 12px rgba(255, 184, 0, 0.4);
+}
+
+@media (max-width: 768px) {
+    .hub-leaderboard-card {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 20px;
+    }
+    .hlb-cta-col {
+        width: 100%;
+    }
+    .btn-global-lb-cta {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ========================================================= */
 /* KURA CINEMATIC WEBSITE LOADING & INTRODUCTION SYSTEM      */
 /* Architected by Bhagath Krishna.M                          */
 /* ========================================================= */
