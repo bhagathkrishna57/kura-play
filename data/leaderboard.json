@@ -1,0 +1,92 @@
+{
+  "aim-matrix": [
+    {
+      "username": "BHAGATH_KRISHNA",
+      "score": 980,
+      "date": "2026-10-31",
+      "verified": true,
+      "title": "ARCADE ARCHITECT"
+    },
+    {
+      "username": "CYBER_VIPER",
+      "score": 720,
+      "date": "2026-10-31",
+      "verified": true
+    },
+    {
+      "username": "NEO_PHANTOM",
+      "score": 540,
+      "date": "2026-10-30",
+      "verified": true
+    },
+    {
+      "username": "REFLEX_ZERO",
+      "score": 410,
+      "date": "2026-10-30",
+      "verified": true
+    }
+  ],
+  "neon-dash": [
+    {
+      "username": "BHAGATH_KRISHNA",
+      "score": 1420,
+      "date": "2026-10-31",
+      "verified": true,
+      "title": "ARCADE ARCHITECT"
+    },
+    {
+      "username": "VOID_RUNNER",
+      "score": 950,
+      "date": "2026-10-31",
+      "verified": true
+    },
+    {
+      "username": "SPEED_GHOST",
+      "score": 680,
+      "date": "2026-10-30",
+      "verified": true
+    }
+  ],
+  "flash-reflex": [
+    {
+      "username": "BHAGATH_KRISHNA",
+      "score": 142,
+      "date": "2026-10-31",
+      "verified": true,
+      "title": "ARCADE ARCHITECT"
+    },
+    {
+      "username": "SYNAPSE_99",
+      "score": 178,
+      "date": "2026-10-31",
+      "verified": true
+    },
+    {
+      "username": "QUANTUM_EYE",
+      "score": 215,
+      "date": "2026-10-30",
+      "verified": true
+    }
+  ],
+  "cyber-slicer": [
+    {
+      "username": "BHAGATH_KRISHNA",
+      "score": 1850,
+      "date": "2026-10-31",
+      "verified": true,
+      "title": "ARCADE ARCHITECT"
+    },
+    {
+      "username": "BLADE_MASTER",
+      "score": 1240,
+      "date": "2026-10-31",
+      "verified": true
+    },
+    {
+      "username": "LASER_CLAW",
+      "score": 890,
+      "date": "2026-10-30",
+      "verified": true
+    }
+  ]
+}

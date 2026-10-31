@@ -22,6 +22,8 @@ class ArcadeHub {
 
         this.partyModal = document.getElementById('party-modal');
         this.leaderboardModal = document.getElementById('leaderboard-modal');
+        this.pilotModal = document.getElementById('pilot-modal');
+        this.currentLbSector = 'aim-matrix';
 
         this.playerNameInput = document.getElementById('player-name-input');
         if (this.playerNameInput && window.KuraMultiplayer) {
@@ -30,6 +32,7 @@ class ArcadeHub {
 
         this.resizeActiveCanvas();
         window.addEventListener('resize', () => this.resizeActiveCanvas());
+        this.initPilotAuth();
     }
 
     resizeActiveCanvas() {
@@ -282,6 +285,10 @@ class ArcadeHub {
     }
 
     goBack() {
+        if (this.pilotModal && this.pilotModal.classList.contains('active')) {
+            this.pilotModal.classList.remove('active');
+            return;
+        }
         if (this.partyModal && this.partyModal.classList.contains('active')) {
             this.partyModal.classList.remove('active');
             return;
@@ -378,14 +385,36 @@ class ArcadeHub {
         this.launchGame(nextGameId);
     }
 
-    handleGameOver(result) {
+    async handleGameOver(result) {
         const goOverlay = this.roundOverOverlay;
         const titleEl = document.getElementById('go-title');
         const scoreEl = document.getElementById('go-score');
+        const srvStatusEl = document.getElementById('go-server-status');
+        const srvMsgEl = document.getElementById('go-server-msg');
 
         titleEl.textContent = result.title;
         titleEl.className = `game-over-title ${result.won ? 'win' : 'lose'}`;
         scoreEl.textContent = result.score;
+
+        if (srvStatusEl && srvMsgEl) {
+            const user = window.KuraServer ? window.KuraServer.currentUser : null;
+            if (user) {
+                srvStatusEl.className = 'go-server-status-pill saved';
+                srvMsgEl.textContent = `SYNCING SCORE AS [${user.username}]...`;
+                const submitRes = await window.KuraServer.submitScore(this.currentGameId, result.score);
+                if (submitRes && submitRes.success) {
+                    srvMsgEl.textContent = `✓ RECORDED TO GLOBAL LEADERBOARD AS [${user.username}]`;
+                } else {
+                    srvMsgEl.textContent = `✓ SCORE RECORDED AS [${user.username}]`;
+                }
+            } else {
+                srvStatusEl.className = 'go-server-status-pill prompt';
+                srvMsgEl.textContent = `🔒 NOT LOGGED IN: Log in to save score of ${result.score} to Global Leaderboard!`;
+                srvStatusEl.onclick = () => {
+                    this.openPilotModal();
+                };
+            }
+        }
 
         if (goOverlay) {
             goOverlay.style.display = 'flex';
@@ -468,42 +497,242 @@ class ArcadeHub {
         `).join('');
     }
 
-    openLeaderboardModal() {
-        this.leaderboardModal.classList.add('active');
-        const tbody = document.getElementById('leaderboard-table-body');
-        if (!tbody || !window.KuraLeaderboard) return;
+    // ==============================================================
+    // PILOT AUTHENTICATION & GLOBAL LEADERBOARD INTEGRATION
+    // ==============================================================
+    initPilotAuth() {
+        const openAuthBtn = document.getElementById('open-auth-btn');
+        const closeAuthBtn = document.getElementById('close-pilot-modal');
+        const tabLoginBtn = document.getElementById('tab-login-btn');
+        const tabRegBtn = document.getElementById('tab-register-btn');
+        const formLogin = document.getElementById('form-pilot-login');
+        const formReg = document.getElementById('form-pilot-register');
+        const errorBanner = document.getElementById('auth-error-msg');
+        const gateLoginBtn = document.getElementById('gate-open-login-btn');
 
-        const stats = window.KuraLeaderboard.localStats;
-        const rows = [
-            {
-                name: '🎯 Aim Matrix',
-                stat: `${stats['aim-matrix']?.highScore || 0} pts`,
-                played: stats['aim-matrix']?.gamesPlayed || 0
-            },
-            {
-                name: '⚡ Neon Dash',
-                stat: `${stats['neon-dash']?.highScore || 0} meters`,
-                played: stats['neon-dash']?.gamesPlayed || 0
-            },
-            {
-                name: '⚡ Flash Reflex',
-                stat: `${stats['flash-reflex']?.bestMs && stats['flash-reflex'].bestMs !== 9999 ? stats['flash-reflex'].bestMs + ' ms' : 'None yet'}`,
-                played: stats['flash-reflex']?.gamesPlayed || 0
-            },
-            {
-                name: '⚔️ Cyber Slicer',
-                stat: `${stats['cyber-slicer']?.highScore || 0} pts`,
-                played: stats['cyber-slicer']?.gamesPlayed || 0
+        if (openAuthBtn) {
+            openAuthBtn.addEventListener('click', () => {
+                const user = window.KuraServer ? window.KuraServer.currentUser : null;
+                if (user) {
+                    if (confirm(`Logged in as [${user.username}]. Do you want to log out?`)) {
+                        window.KuraServer.logout();
+                        this.updateAuthUI();
+                    }
+                } else {
+                    this.openPilotModal();
+                }
+            });
+        }
+
+        if (closeAuthBtn) {
+            closeAuthBtn.addEventListener('click', () => this.closePilotModal());
+        }
+
+        if (gateLoginBtn) {
+            gateLoginBtn.addEventListener('click', () => {
+                this.leaderboardModal.classList.remove('active');
+                this.openPilotModal();
+            });
+        }
+
+        if (tabLoginBtn && tabRegBtn) {
+            tabLoginBtn.addEventListener('click', () => {
+                tabLoginBtn.classList.add('active');
+                tabRegBtn.classList.remove('active');
+                formLogin.classList.remove('hidden');
+                formReg.classList.add('hidden');
+                if (errorBanner) errorBanner.classList.add('hidden');
+            });
+
+            tabRegBtn.addEventListener('click', () => {
+                tabRegBtn.classList.add('active');
+                tabLoginBtn.classList.remove('active');
+                formReg.classList.remove('hidden');
+                formLogin.classList.add('hidden');
+                if (errorBanner) errorBanner.classList.add('hidden');
+            });
+        }
+
+        // Handle Login Submission
+        if (formLogin) {
+            formLogin.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const u = document.getElementById('login-username').value;
+                const p = document.getElementById('login-password').value;
+                if (!u || !p) return;
+
+                const res = await window.KuraServer.login(u, p);
+                if (res.success) {
+                    if (window.KuraSounds) window.KuraSounds.synthAccessGrantedSlam();
+                    this.closePilotModal();
+                    this.updateAuthUI();
+                } else {
+                    if (errorBanner) {
+                        errorBanner.textContent = res.error || 'Authentication failed.';
+                        errorBanner.classList.remove('hidden');
+                    }
+                }
+            });
+        }
+
+        // Handle Registration Submission
+        if (formReg) {
+            formReg.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const u = document.getElementById('reg-username').value;
+                const p = document.getElementById('reg-password').value;
+                const s = document.getElementById('reg-sector').value;
+                if (!u || !p) return;
+
+                const res = await window.KuraServer.register(u, p, s);
+                if (res.success) {
+                    if (window.KuraSounds) window.KuraSounds.synthSciFiNotification();
+                    this.closePilotModal();
+                    this.updateAuthUI();
+                } else {
+                    if (errorBanner) {
+                        errorBanner.textContent = res.error || 'Registration failed.';
+                        errorBanner.classList.remove('hidden');
+                    }
+                }
+            });
+        }
+
+        // Leaderboard Sector Tabs
+        const lbTabs = document.querySelectorAll('.lb-tab');
+        lbTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                lbTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                this.currentLbSector = tab.getAttribute('data-game');
+                this.renderLeaderboardSector(this.currentLbSector);
+                if (window.KuraSounds) window.KuraSounds.playClick();
+            });
+        });
+
+        // Listen for Auth changes
+        if (window.KuraServer) {
+            window.KuraServer.onAuthChange(() => this.updateAuthUI());
+        }
+
+        this.updateAuthUI();
+        this.updateServerStatusBadge();
+    }
+
+    async updateServerStatusBadge() {
+        const led = document.getElementById('server-status-led');
+        const text = document.getElementById('server-status-text');
+        if (!led || !text) return;
+
+        const isOnline = await window.KuraServer.checkServerHealth();
+        if (isOnline) {
+            led.style.background = 'var(--neon-green)';
+            led.style.boxShadow = '0 0 10px var(--neon-green)';
+            text.textContent = 'CONNECTED: LOCAL ARCADE SERVER (PORT 3000)';
+        } else {
+            led.style.background = 'var(--neon-cyan)';
+            led.style.boxShadow = '0 0 10px var(--neon-cyan)';
+            text.textContent = 'CONNECTED: GLOBAL CLOUD NETWORK (GITHUB SYNC)';
+        }
+    }
+
+    updateAuthUI() {
+        const user = window.KuraServer ? window.KuraServer.currentUser : null;
+        const navLabel = document.getElementById('pilot-nav-label');
+        const navLed = document.getElementById('pilot-nav-led');
+        const lbPilotName = document.getElementById('lb-pilot-name');
+
+        if (user) {
+            if (navLabel) navLabel.textContent = `PILOT: ${user.username}`;
+            if (navLed) {
+                navLed.style.background = 'var(--neon-green)';
+                navLed.style.boxShadow = '0 0 10px var(--neon-green)';
             }
-        ];
+            if (lbPilotName) lbPilotName.textContent = `PILOT: ${user.username} [VERIFIED]`;
 
-        tbody.innerHTML = rows.map((r) => `
-            <tr>
-                <td><strong>${r.name}</strong></td>
-                <td style="color: var(--neon-cyan); font-family: 'JetBrains Mono', monospace;">${r.stat}</td>
-                <td style="color: var(--text-muted); font-family: 'JetBrains Mono', monospace;">${r.played} rounds</td>
-            </tr>
-        `).join('');
+            // Update Multiplayer callsign
+            if (window.KuraMultiplayer) {
+                window.KuraMultiplayer.setPlayerName(user.username);
+            }
+            if (this.playerNameInput) {
+                this.playerNameInput.value = user.username;
+            }
+        } else {
+            if (navLabel) navLabel.textContent = 'PILOT LOGIN';
+            if (navLed) {
+                navLed.style.background = 'var(--neon-coral)';
+                navLed.style.boxShadow = '0 0 8px var(--neon-coral)';
+            }
+            if (lbPilotName) lbPilotName.textContent = 'GUEST (NOT LOGGED IN)';
+        }
+    }
+
+    openPilotModal() {
+        if (this.pilotModal) {
+            this.pilotModal.classList.add('active');
+            if (window.KuraSounds) window.KuraSounds.playClick();
+        }
+    }
+
+    closePilotModal() {
+        if (this.pilotModal) {
+            this.pilotModal.classList.remove('active');
+        }
+    }
+
+    async openLeaderboardModal() {
+        if (!this.leaderboardModal) return;
+        this.leaderboardModal.classList.add('active');
+        if (window.KuraSounds) window.KuraSounds.playClick();
+
+        const user = window.KuraServer ? window.KuraServer.currentUser : null;
+        const authGate = document.getElementById('lb-auth-gate');
+        const contentArea = document.getElementById('lb-content-area');
+
+        // Require user login to view and participate in the leaderboard
+        if (!user) {
+            if (authGate) authGate.classList.remove('hidden');
+            if (contentArea) contentArea.classList.add('hidden');
+            return;
+        }
+
+        if (authGate) authGate.classList.add('hidden');
+        if (contentArea) contentArea.classList.remove('hidden');
+
+        await this.renderLeaderboardSector(this.currentLbSector || 'aim-matrix');
+    }
+
+    async renderLeaderboardSector(gameId) {
+        const tbody = document.getElementById('leaderboard-table-body');
+        if (!tbody || !window.KuraServer) return;
+
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">FETCHING SERVER RANKINGS...</td></tr>`;
+
+        const scores = await window.KuraServer.fetchLeaderboard(gameId);
+        const currentUser = window.KuraServer.currentUser;
+
+        if (!scores || scores.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">NO RECORDED SCORES YET. BE THE FIRST!</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = scores.map((item, idx) => {
+            const isCurrent = currentUser && currentUser.username === item.username;
+            const rankBadge = idx === 0 ? '🥇 #1' : idx === 1 ? '🥈 #2' : idx === 2 ? '🥉 #3' : `#${idx + 1}`;
+            const statText = gameId === 'flash-reflex' ? `${item.score} ms` : gameId === 'neon-dash' ? `${item.score}m` : `${item.score} pts`;
+
+            return `
+                <tr class="${isCurrent ? 'lb-current-pilot-row' : ''}">
+                    <td><strong style="color: ${idx < 3 ? 'var(--neon-green)' : 'var(--text-muted)'}; font-family: 'JetBrains Mono', monospace;">${rankBadge}</strong></td>
+                    <td>
+                        <strong style="color: ${isCurrent ? 'var(--neon-cyan)' : '#FFFFFF'}; font-family: 'Space Grotesk', sans-serif;">${item.username}</strong>
+                        ${item.title ? `<span style="font-size: 9px; color: var(--neon-emerald); margin-left: 6px; padding: 2px 6px; border: 1px solid var(--neon-emerald); border-radius: 4px;">${item.title}</span>` : ''}
+                    </td>
+                    <td style="color: var(--neon-cyan); font-family: 'JetBrains Mono', monospace; font-weight: 700;">${statText}</td>
+                    <td style="color: var(--neon-emerald); font-family: 'JetBrains Mono', monospace; font-size: 11px;">✓ VERIFIED</td>
+                </tr>
+            `;
+        }).join('');
     }
 
     checkUrlRoom() {

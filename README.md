@@ -28,6 +28,15 @@ Designed and engineered from the ground up by **Bhagath Krishna.M**, KURA reject
 
 ---
 
+## 🌐 Pilot Login & Global Server Leaderboard
+
+- **User Authentication:** Every pilot registers a unique Callsign and security PIN before accessing the global leaderboards.
+- **Score Verification:** Finished rounds automatically sync to the server leaderboard under the pilot's verified name.
+- **Server Engine (`server.js`):** Built-in zero-dependency Node.js HTTP + REST API server for global leaderboard sync, authentication, and static asset delivery.
+- **One-Click Launch:** Run `start-server.bat` to host locally on `http://localhost:3000` or open `index.html` directly in any browser with hybrid cloud fallback!
+
+---
+
 ## ⌨️ Tactical Controls & Hotkeys
 
 - **`[R]`** — **Try Again / Restart:** Instantly restart the current game round at any time.

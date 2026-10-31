@@ -47,6 +47,10 @@
                 <button class="btn-nav" id="open-leaderboard-btn">
                     <span>🏆</span> RECORDS
                 </button>
+                <button class="btn-nav btn-pilot-auth" id="open-auth-btn">
+                    <span class="led-status" id="pilot-nav-led" style="background: var(--neon-coral); box-shadow: 0 0 8px var(--neon-coral);"></span>
+                    <span id="pilot-nav-label">PILOT LOGIN</span>
+                </button>
                 <button class="btn-nav" id="toggle-sound-btn">
                     <span id="sound-icon">🔊</span>
                 </button>
@@ -213,6 +217,10 @@
                 <div class="game-over-card">
                     <h2 class="game-over-title win" id="go-title">ROUND WON!</h2>
                     <p class="game-over-score" id="go-score">Score: 240</p>
+                    <div id="go-server-status" class="go-server-status-pill">
+                        <span class="led-status"></span>
+                        <span id="go-server-msg">CONNECTING TO GLOBAL LEADERBOARD...</span>
+                    </div>
                     <div class="game-over-actions">
                         <button class="btn-retry" id="go-retry-btn">🔄 TRY AGAIN [SPACE / R]</button>
                         <button class="btn-next-game" id="go-next-btn">TRY ANOTHER GAME [N]</button>
@@ -261,31 +269,130 @@
         </div>
     </div>
 
+    <!-- Pilot Authentication Modal (Login / Register) -->
+    <div class="modal-overlay" id="pilot-modal">
+        <div class="modal-box pilot-auth-box">
+            <button class="modal-close" id="close-pilot-modal">✕</button>
+            <div class="auth-modal-header">
+                <div class="auth-icon-badge">⚡</div>
+                <div>
+                    <h2 class="modal-title" id="auth-modal-title">Pilot Authentication</h2>
+                    <p class="modal-subtitle">Login to register your callsign on the global server leaderboard.</p>
+                </div>
+            </div>
+
+            <!-- Auth Mode Toggle Tabs -->
+            <div class="auth-tab-bar">
+                <button class="auth-tab-btn active" id="tab-login-btn">LOG IN</button>
+                <button class="auth-tab-btn" id="tab-register-btn">REGISTER NEW PILOT</button>
+            </div>
+
+            <div id="auth-error-msg" class="auth-error-banner hidden"></div>
+
+            <!-- Login Form -->
+            <form id="form-pilot-login" class="auth-form active">
+                <div class="input-group">
+                    <label class="input-label">CALLSIGN / USERNAME</label>
+                    <input type="text" id="login-username" class="text-input" placeholder="e.g. VIPER_99" required autocomplete="username">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">SECURITY ACCESS PIN / PASSWORD</label>
+                    <input type="password" id="login-password" class="text-input" placeholder="Enter PIN or password" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn-primary auth-submit-btn" id="btn-submit-login">
+                    <span>AUTHENTICATE PILOT ➔</span>
+                </button>
+            </form>
+
+            <!-- Register Form -->
+            <form id="form-pilot-register" class="auth-form hidden">
+                <div class="input-group">
+                    <label class="input-label">CHOOSE YOUR CALLSIGN</label>
+                    <input type="text" id="reg-username" class="text-input" placeholder="3-16 alphanumeric chars" maxlength="16" required autocomplete="username">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">CREATE SECURITY PIN / PASSWORD</label>
+                    <input type="password" id="reg-password" class="text-input" placeholder="Min. 3 characters" required autocomplete="new-password">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">HOME TACTICAL SECTOR</label>
+                    <select id="reg-sector" class="text-input" style="background: rgba(14, 18, 27, 0.95); cursor: pointer;">
+                        <option value="AIM MATRIX">SECTOR 01 // AIM MATRIX (Precision)</option>
+                        <option value="NEON DASH">SECTOR 02 // NEON DASH (Runner)</option>
+                        <option value="FLASH REFLEX">SECTOR 03 // FLASH REFLEX (Reaction)</option>
+                        <option value="CYBER SLICER">SECTOR 04 // CYBER SLICER (Kinetic)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary auth-submit-btn" id="btn-submit-reg">
+                    <span>ENLIST NEW PILOT ➔</span>
+                </button>
+            </form>
+
+            <div class="auth-server-status-pill">
+                <span class="led-status" id="server-status-led"></span>
+                <span id="server-status-text">CONNECTING TO ARCADE SERVER...</span>
+            </div>
+        </div>
+    </div>
+
     <!-- Leaderboard Modal -->
     <div class="modal-overlay" id="leaderboard-modal">
-        <div class="modal-box">
+        <div class="modal-box leaderboard-modal-box">
             <button class="modal-close" id="close-leaderboard-modal">✕</button>
-            <h2 class="modal-title">Arcade Records</h2>
-            <p class="modal-subtitle">Personal bests and room standings.</p>
+            <div class="lb-header-row">
+                <div>
+                    <h2 class="modal-title">Global Server Records</h2>
+                    <p class="modal-subtitle">Live verified rankings across all connected pilots.</p>
+                </div>
+                <div class="lb-pilot-badge" id="lb-current-pilot-tag">
+                    <span class="led-status"></span>
+                    <span id="lb-pilot-name">GUEST (NOT LOGGED IN)</span>
+                </div>
+            </div>
 
-            <table class="leaderboard-table">
-                <thead>
-                    <tr>
-                        <th>GAME</th>
-                        <th>RECORD STAT</th>
-                        <th>GAMES PLAYED</th>
-                    </tr>
-                </thead>
-                <tbody id="leaderboard-table-body">
-                    <!-- Populated by JS -->
-                </tbody>
-            </table>
+            <!-- Sector Tabs -->
+            <div class="lb-sector-tabs">
+                <button class="lb-tab active" data-game="aim-matrix">🎯 AIM MATRIX</button>
+                <button class="lb-tab" data-game="neon-dash">⚡ NEON DASH</button>
+                <button class="lb-tab" data-game="flash-reflex">⚡ FLASH REFLEX</button>
+                <button class="lb-tab" data-game="cyber-slicer">⚔️ CYBER SLICER</button>
+            </div>
+
+            <!-- Login Gate (Shown when user is NOT logged in) -->
+            <div id="lb-auth-gate" class="lb-auth-gate-box">
+                <div class="gate-lock-icon">🔒</div>
+                <h3 class="gate-headline">PILOT LOGIN REQUIRED</h3>
+                <p class="gate-desc">
+                    Every user must log in to unlock the global leaderboard, verify scores, and compete for the #1 rank against other pilots.
+                </p>
+                <button class="btn-primary gate-login-btn" id="gate-open-login-btn">
+                    <span>LOG IN OR REGISTER PILOT ➔</span>
+                </button>
+            </div>
+
+            <!-- Leaderboard Data Container (Shown when logged in) -->
+            <div id="lb-content-area" class="hidden">
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 15%;">RANK</th>
+                            <th style="width: 45%;">PILOT CALLSIGN</th>
+                            <th style="width: 25%;">RECORD STAT</th>
+                            <th style="width: 15%;">VERIFIED</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboard-table-body">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <!-- Core Architecture Scripts (Runs directly in browser via file:/// or http://) -->
     <script src="js/sound.js"></script>
     <script src="js/site-loader.js"></script>
+    <script src="js/server-client.js"></script>
     <script src="js/leaderboard.js"></script>
     <script src="js/multiplayer.js"></script>
     <script src="js/games/aim-matrix.js"></script>

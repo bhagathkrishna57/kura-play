@@ -783,6 +783,241 @@ header.arcade-nav {
 }
 
 /* ========================================================= */
+/* PILOT AUTHENTICATION & GLOBAL LEADERBOARD STYLING        */
+/* ========================================================= */
+.btn-pilot-auth {
+    border-color: rgba(0, 245, 160, 0.3);
+    background: rgba(0, 245, 160, 0.06);
+}
+
+.btn-pilot-auth:hover {
+    border-color: var(--neon-emerald);
+    box-shadow: 0 0 15px rgba(0, 245, 160, 0.4);
+}
+
+.auth-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.auth-icon-badge {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: rgba(0, 217, 245, 0.1);
+    border: 1px solid var(--neon-cyan);
+    color: var(--neon-cyan);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 0 20px rgba(0, 217, 245, 0.3);
+}
+
+.auth-tab-bar {
+    display: flex;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 20px;
+}
+
+.auth-tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.auth-tab-btn:hover {
+    color: #FFFFFF;
+}
+
+.auth-tab-btn.active {
+    color: var(--neon-emerald);
+    border-bottom-color: var(--neon-emerald);
+    font-weight: 700;
+}
+
+.auth-error-banner {
+    background: rgba(255, 46, 85, 0.15);
+    border: 1px solid var(--neon-crimson);
+    color: #FF6B8B;
+    font-size: 12px;
+    font-family: var(--font-mono);
+    padding: 10px 14px;
+    border-radius: var(--radius-hud);
+    margin-bottom: 16px;
+}
+
+.auth-server-status-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 20px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+}
+
+/* Leaderboard Modal Enhancements */
+.leaderboard-modal-box {
+    max-width: 680px;
+    width: 95%;
+}
+
+.lb-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.lb-pilot-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--neon-cyan);
+    letter-spacing: 1px;
+}
+
+.lb-sector-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 18px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.lb-tab {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 8px 12px;
+    border-radius: var(--radius-hud);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.lb-tab:hover {
+    color: #FFFFFF;
+    border-color: var(--neon-cyan);
+}
+
+.lb-tab.active {
+    background: rgba(0, 217, 245, 0.12);
+    border-color: var(--neon-cyan);
+    color: var(--neon-cyan);
+    box-shadow: 0 0 14px rgba(0, 217, 245, 0.25);
+}
+
+/* Auth Gate Box */
+.lb-auth-gate-box {
+    text-align: center;
+    padding: 40px 20px;
+    background: rgba(4, 6, 12, 0.6);
+    border: 1px dashed rgba(255, 46, 85, 0.4);
+    border-radius: var(--radius-card);
+}
+
+.gate-lock-icon {
+    font-size: 42px;
+    margin-bottom: 14px;
+    animation: lock-bob 2s infinite ease-in-out;
+}
+
+@keyframes lock-bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+
+.gate-headline {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    color: #FFFFFF;
+    margin-bottom: 10px;
+}
+
+.gate-desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    max-width: 440px;
+    margin: 0 auto 24px auto;
+}
+
+.gate-login-btn {
+    display: inline-block;
+    width: auto;
+    padding: 12px 28px;
+    font-size: 13px;
+}
+
+/* Leaderboard Highlight for Current Player */
+.lb-current-pilot-row {
+    background: rgba(0, 217, 245, 0.12) !important;
+    border-left: 3px solid var(--neon-cyan) !important;
+}
+
+.lb-current-pilot-row td {
+    color: #FFFFFF !important;
+    font-weight: 700;
+}
+
+/* Game Over Server Status */
+.go-server-status-pill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(0, 217, 245, 0.08);
+    border: 1px solid rgba(0, 217, 245, 0.25);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--neon-cyan);
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+}
+
+.go-server-status-pill.saved {
+    background: rgba(0, 245, 160, 0.1);
+    border-color: var(--neon-emerald);
+    color: var(--neon-emerald);
+}
+
+.go-server-status-pill.prompt {
+    background: rgba(255, 184, 0, 0.1);
+    border-color: var(--neon-amber);
+    color: var(--neon-amber);
+    cursor: pointer;
+}
+
+/* ========================================================= */
 /* KURA CINEMATIC WEBSITE LOADING & INTRODUCTION SYSTEM      */
 /* Architected by Bhagath Krishna.M                          */
 /* ========================================================= */
