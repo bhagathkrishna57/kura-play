@@ -25,6 +25,19 @@ class CardPreviewEngine {
             }
         });
 
+        window.addEventListener('resize', () => {
+            this.cards.forEach(card => {
+                const gameId = card.getAttribute('data-game');
+                if (this.canvases[gameId]) {
+                    const c = this.canvases[gameId].canvas;
+                    if (c.offsetWidth && c.offsetHeight) {
+                        c.width = c.offsetWidth;
+                        c.height = c.offsetHeight;
+                    }
+                }
+            });
+        });
+
         const loop = () => {
             this.renderAll();
             this.animId = requestAnimationFrame(loop);

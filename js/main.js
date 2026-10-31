@@ -32,6 +32,9 @@ class ArcadeHub {
 
         this.resizeActiveCanvas();
         window.addEventListener('resize', () => this.resizeActiveCanvas());
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => this.resizeActiveCanvas(), 150);
+        });
         this.initPilotAuth();
     }
 
@@ -341,6 +344,7 @@ class ArcadeHub {
     }
 
     showHub(updateHistory = true) {
+        document.body.classList.remove('in-game');
         if (this.currentGame) {
             this.currentGame.destroy();
             this.currentGame = null;
@@ -369,6 +373,7 @@ class ArcadeHub {
         }
 
         this.currentGameId = gameId;
+        document.body.classList.add('in-game');
         if (this.roundOverOverlay) {
             this.roundOverOverlay.classList.remove('active');
             this.roundOverOverlay.style.display = 'none';
