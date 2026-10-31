@@ -170,8 +170,8 @@ class KuraServerClient {
     }
 
     async loginWithGoogle(profile = {}) {
-        const email = profile.email || 'bhagath.pilot@gmail.com';
-        const name = profile.name || 'Bhagath Krishna';
+        const name = (profile.name || '').trim();
+        const email = profile.email || (name ? `${name.toLowerCase().replace(/[^a-z0-9]/g, '')}@gmail.com` : 'pilot@gmail.com');
         const picture = profile.picture || 'https://lh3.googleusercontent.com/a/default-user';
 
         // Try Server First

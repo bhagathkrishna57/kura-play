@@ -566,9 +566,9 @@ class ArcadeHub {
         const triggerGoogleAuth = async () => {
             if (window.KuraSounds) window.KuraSounds.playClick();
             
-            let defaultName = 'Bhagath Krishna';
-            let googleName = prompt('Enter your Google Account Name / Callsign:', defaultName);
-            if (!googleName) return;
+            let googleName = prompt('Enter Your Name / Callsign for Google Login:', '');
+            if (!googleName || !googleName.trim()) return;
+            googleName = googleName.trim();
 
             const res = await window.KuraServer.loginWithGoogle({
                 name: googleName,
