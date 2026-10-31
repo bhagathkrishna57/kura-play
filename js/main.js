@@ -390,6 +390,7 @@ class ArcadeHub {
         const titleEl = document.getElementById('go-title');
         const scoreEl = document.getElementById('go-score');
         const srvStatusEl = document.getElementById('go-server-status');
+        const srvIconEl = document.getElementById('go-server-icon');
         const srvMsgEl = document.getElementById('go-server-msg');
 
         titleEl.textContent = result.title;
@@ -411,16 +412,20 @@ class ArcadeHub {
             const user = window.KuraServer ? window.KuraServer.currentUser : null;
             if (user) {
                 srvStatusEl.className = 'go-server-status-pill saved';
+                srvStatusEl.onclick = null;
+                if (srvIconEl) srvIconEl.textContent = '⚡';
                 srvMsgEl.textContent = `SYNCING SCORE AS [${user.username}]...`;
                 const submitRes = await window.KuraServer.submitScore(this.currentGameId, numericScore);
+                if (srvIconEl) srvIconEl.textContent = '✓';
                 if (submitRes && submitRes.success) {
-                    srvMsgEl.textContent = `✓ RECORDED TO GLOBAL LEADERBOARD AS [${user.username}]`;
+                    srvMsgEl.textContent = `SAVED TO GLOBAL LEADERBOARD AS [${user.username}]`;
                 } else {
-                    srvMsgEl.textContent = `✓ SCORE RECORDED AS [${user.username}]`;
+                    srvMsgEl.textContent = `SCORE RECORDED AS [${user.username}]`;
                 }
             } else {
                 srvStatusEl.className = 'go-server-status-pill prompt';
-                srvMsgEl.textContent = `🔒 NOT LOGGED IN: Log in to save score (${scoreDisplay}) to Global Leaderboard!`;
+                if (srvIconEl) srvIconEl.textContent = '🔒';
+                srvMsgEl.innerHTML = `<strong>NOT LOGGED IN:</strong> Log in to save <strong>${scoreDisplay}</strong> to Global Leaderboard`;
                 srvStatusEl.onclick = () => {
                     this.openPilotModal();
                 };

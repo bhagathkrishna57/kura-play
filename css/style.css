@@ -1068,36 +1068,46 @@ header.arcade-nav {
     gap: 8px;
     background: rgba(0, 217, 245, 0.08);
     border: 1px solid rgba(0, 217, 245, 0.25);
-    padding: 8px 18px;
+    padding: 9px 18px;
     border-radius: 30px;
     font-family: var(--font-mono);
     font-size: 11px;
     color: var(--neon-cyan);
-    margin: 0 auto 20px auto;
+    margin: 0 auto 18px auto;
     letter-spacing: 0.5px;
-    max-width: 90%;
+    max-width: 92%;
     text-align: center;
     line-height: 1.4;
     transition: all 0.25s ease;
 }
 
+.go-server-status-pill .go-srv-icon {
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
 .go-server-status-pill.saved {
-    background: rgba(0, 245, 160, 0.1);
-    border-color: var(--neon-emerald);
-    color: var(--neon-emerald);
+    background: rgba(0, 245, 160, 0.12);
+    border-color: rgba(0, 245, 160, 0.6);
+    color: #00F5A0;
+    box-shadow: 0 0 15px rgba(0, 245, 160, 0.2);
 }
 
 .go-server-status-pill.prompt {
-    background: rgba(255, 184, 0, 0.1);
-    border-color: var(--neon-amber);
-    color: var(--neon-amber);
+    background: rgba(255, 184, 0, 0.12);
+    border: 1px solid rgba(255, 184, 0, 0.6);
+    color: #FFB800;
     cursor: pointer;
+    box-shadow: 0 0 16px rgba(255, 184, 0, 0.25);
 }
 
 .go-server-status-pill.prompt:hover {
-    background: rgba(255, 184, 0, 0.2);
-    border-color: var(--neon-amber);
-    box-shadow: 0 0 15px rgba(255, 184, 0, 0.4);
+    background: rgba(255, 184, 0, 0.22);
+    border-color: #FFB800;
+    box-shadow: 0 0 25px rgba(255, 184, 0, 0.45);
     transform: translateY(-1px);
 }
 
