@@ -41,8 +41,10 @@ class AimMatrixGame {
         this.handlePointerDown = (e) => {
             if (!this.running) return;
             const rect = this.canvas.getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
-            const clickY = e.clientY - rect.top;
+            const scaleX = rect.width ? (this.canvas.width / rect.width) : 1;
+            const scaleY = rect.height ? (this.canvas.height / rect.height) : 1;
+            const clickX = (e.clientX - rect.left) * scaleX;
+            const clickY = (e.clientY - rect.top) * scaleY;
             this.registerShot(clickX, clickY);
         };
 

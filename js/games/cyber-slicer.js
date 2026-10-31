@@ -73,8 +73,10 @@ class CyberSlicerGame {
 
     addTrailPoint(e) {
         const rect = this.canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const scaleX = rect.width ? (this.canvas.width / rect.width) : 1;
+        const scaleY = rect.height ? (this.canvas.height / rect.height) : 1;
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
         this.bladeTrail.push({ x, y, life: 1.0 });
         if (this.bladeTrail.length > 12) {
             this.bladeTrail.shift();

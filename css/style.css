@@ -2161,16 +2161,53 @@ body.hub-ready .game-console-card:nth-child(4) { animation-delay: 0.4s !importan
 
     /* Intro Loading Screen on Mobile */
     .intro-content-container {
-        padding: 12px 10px;
+        padding: 10px 8px;
     }
     .intro-card-wrapper {
-        padding: 16px 14px;
-        max-height: 85vh;
-        max-height: 85dvh;
+        padding: 14px 12px;
+        max-height: 88vh;
+        max-height: 88dvh;
         overflow-y: auto;
     }
+    .intro-card-nav {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        display: flex;
+        flex-wrap: nowrap;
+    }
+    .intro-tab-btn {
+        flex-shrink: 0;
+        padding: 10px 14px;
+        font-size: 10px;
+        letter-spacing: 1px;
+        white-space: nowrap;
+    }
+    .intro-games-grid {
+        grid-template-columns: 1fr !important;
+        gap: 10px;
+    }
+    .specs-cards-row {
+        grid-template-columns: 1fr !important;
+        gap: 12px;
+    }
+    .intro-card-footer {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px;
+        padding: 12px 14px !important;
+    }
+    .btn-enter-arcade {
+        width: 100%;
+        justify-content: center;
+    }
+    .creator-name-headline {
+        font-size: clamp(22px, 6vw, 32px);
+    }
+    .creator-badge-row {
+        gap: 12px;
+    }
     .manifesto-title {
-        font-size: 22px;
+        font-size: 20px;
     }
     .manifesto-body {
         font-size: 13px;
@@ -2189,14 +2226,20 @@ body.hub-ready .game-console-card:nth-child(4) { animation-delay: 0.4s !importan
 
 @media (max-width: 480px) {
     header.arcade-nav {
-        padding: 8px 10px;
+        padding: 8px 8px;
     }
     .btn-nav {
-        padding: 5px 8px;
+        padding: 5px 7px;
+        font-size: 10px;
+    }
+    #global-skip-btn .nav-btn-text {
+        display: none;
+    }
+    #open-leaderboard-btn .nav-btn-text {
         font-size: 10px;
     }
     .brand-primary-name {
-        font-size: 16px;
+        font-size: 15px;
         letter-spacing: 2px;
     }
     .hero-title-main {

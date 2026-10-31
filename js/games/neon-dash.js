@@ -49,6 +49,20 @@ class NeonDashGame {
         this.canvas.addEventListener('pointerdown', this.handleAction);
     }
 
+    handleResize(w, h) {
+        const padY = h < 550 ? 55 : 80;
+        this.ceilingY = padY;
+        this.floorY = h - padY;
+        if (this.player) {
+            this.player.x = Math.max(60, Math.min(140, w * 0.2));
+            if (this.player.gravityDir === 1) {
+                this.player.y = Math.min(this.player.y, this.floorY - this.player.height);
+            } else {
+                this.player.y = Math.max(this.player.y, this.ceilingY);
+            }
+        }
+    }
+
     destroy() {
         this.running = false;
         cancelAnimationFrame(this.animId);
@@ -78,8 +92,9 @@ class NeonDashGame {
 
     start() {
         this.running = true;
-        this.ceilingY = 80;
-        this.floorY = this.canvas.height - 80;
+        const padY = this.canvas.height < 550 ? 55 : 80;
+        this.ceilingY = padY;
+        this.floorY = this.canvas.height - padY;
         this.speed = 7;
         this.distance = 0;
         this.score = 0;
@@ -88,7 +103,7 @@ class NeonDashGame {
         this.particles = [];
 
         this.player = {
-            x: 140,
+            x: Math.max(60, Math.min(140, this.canvas.width * 0.2)),
             y: this.floorY - 24,
             width: 24,
             height: 24,
