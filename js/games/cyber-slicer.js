@@ -104,10 +104,10 @@ class CyberSlicerGame {
             const x = this.canvas.width * 0.2 + Math.random() * (this.canvas.width * 0.6);
             const y = this.canvas.height + 40;
 
-            // Launch physics towards center
+            // Launch physics towards center with relaxed, comfortable speed
             const targetX = this.canvas.width * 0.3 + Math.random() * (this.canvas.width * 0.4);
-            const vx = (targetX - x) * (0.8 + Math.random() * 0.4) / 30;
-            const vy = -(Math.random() * 5 + 15); // initial upward velocity
+            const vx = (targetX - x) * (0.5 + Math.random() * 0.3) / 42;
+            const vy = -(Math.random() * 3 + 10.5); // reduced upward velocity for a smooth, readable arc
 
             const colorPool = ['#00D9F5', '#00F5A0', '#FFE600', '#B537F2'];
             const color = isBomb ? '#FF3366' : colorPool[Math.floor(Math.random() * colorPool.length)];
@@ -121,7 +121,7 @@ class CyberSlicerGame {
                 color,
                 isBomb,
                 rotation: 0,
-                rotSpeed: (Math.random() - 0.5) * 6,
+                rotSpeed: (Math.random() - 0.5) * 3.5,
                 sliced: false
             });
         }
@@ -253,11 +253,11 @@ class CyberSlicerGame {
     }
 
     update(dt) {
-        const gravity = 22; // gravity constant
+        const gravity = 13; // calibrated gravity for a floaty, satisfying arc
         this.difficultyTimer += dt;
 
-        // Spawn logic
-        const spawnDelay = Math.max(900, 2100 - this.difficultyTimer * 20);
+        // Spawn logic with comfortable pacing
+        const spawnDelay = Math.max(1200, 2400 - this.difficultyTimer * 15);
         if (performance.now() - this.lastSpawnTime > spawnDelay) {
             this.spawnWave();
             this.lastSpawnTime = performance.now();
