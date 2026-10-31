@@ -172,10 +172,27 @@ class ArcadeHub {
             if (btn) btn.addEventListener('click', () => this.skipToNextGame());
         });
 
+        const retryBtns = [
+            document.getElementById('hud-retry-btn'),
+            document.getElementById('go-retry-btn')
+        ];
+        retryBtns.forEach(btn => {
+            if (btn) btn.addEventListener('click', () => this.retryGame());
+        });
+
         window.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT') return;
 
-            // Space / Enter to Play Again when game over screen is showing
+            // R to Try Again / Restart game anytime
+            if (e.key === 'r' || e.key === 'R') {
+                if (this.currentGameId) {
+                    e.preventDefault();
+                    this.retryGame();
+                    return;
+                }
+            }
+
+            // Space / Enter to Try Again when game over screen is showing
             if (e.code === 'Space' || e.key === ' ' || e.code === 'Enter') {
                 if (this.roundOverOverlay && this.roundOverOverlay.classList.contains('active')) {
                     e.preventDefault();

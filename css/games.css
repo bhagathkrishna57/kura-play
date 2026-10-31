@@ -87,6 +87,20 @@
     border-color: var(--neon-cyan);
 }
 
+.hud-btn.retry-highlight {
+    background: rgba(0, 245, 160, 0.14);
+    border-color: rgba(0, 245, 160, 0.5);
+    color: #00F5A0;
+    font-weight: 800;
+}
+
+.hud-btn.retry-highlight:hover {
+    background: #00F5A0;
+    color: #04060A;
+    box-shadow: 0 0 18px rgba(0, 245, 160, 0.7);
+    transform: translateY(-1px);
+}
+
 .hud-btn.skip-highlight {
     background: rgba(255, 51, 102, 0.2);
     border-color: var(--neon-coral);

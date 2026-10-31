@@ -30,8 +30,9 @@ Designed and engineered from the ground up by **Bhagath Krishna.M**, KURA reject
 
 ## ⌨️ Tactical Controls & Hotkeys
 
+- **`[R]`** — **Try Again / Restart:** Instantly restart the current game round at any time.
 - **`[N]`** — **Jump Sector:** Instantly skip to the next game at any time without leaving the session.
-- **`[SPACE]` / `[ENTER]`** — **Action & Play Again:** Jump, slice, fire reflex cue, or retry a round instantly.
+- **`[SPACE]` / `[ENTER]`** — **Action & Try Again:** Jump, slice, fire reflex cue, or retry a round instantly.
 - **`[ESC]` / `[BACKSPACE]`** — **Return to Hub:** Seamlessly exit back to the sector grid.
 - **`MODE: SOLO / 2-PLAYER`** — Local 2-Player head-to-head on the same keyboard.
 - **`PARTY LOBBY`** — PeerJS WebRTC multiplayer room lobbies to share room codes with friends.
