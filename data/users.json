@@ -5,5 +5,11 @@
     "sector": "ALL",
     "role": "ARCHITECT",
     "createdAt": "2026-10-31"
+  },
+  "TEST_PILOT_63": {
+    "username": "TEST_PILOT_63",
+    "hash": "75f3bf0a3955ebbe4d2d1370e4772adb2b4e2bf1285efc0b47b21c4ed77e125a",
+    "sector": "AIM MATRIX",
+    "createdAt": "2026-10-31"
   }
 }
