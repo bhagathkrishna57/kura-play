@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Bhagath Krishna.M">
+    <title>KURA // The Anti-Boredom Cyber Arcade</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/games.css">
+    <!-- PeerJS for seamless WebRTC multiplayer room lobbies -->
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+</head>
+<body>
+    <!-- Interactive Cursor & Particle Starfield Canvas -->
+    <canvas id="bg-canvas"></canvas>
+
+    <div id="app-container">
+        <!-- Persistent Navigation Bar -->
+        <header class="arcade-nav">
+            <div class="brand-wrapper" id="nav-brand-btn">
+                <div class="brand-monolith">
+                    <span>K</span>
+                </div>
+                <div class="brand-text-cluster">
+                    <div class="brand-primary-name">KURA</div>
+                    <div class="brand-sub-spec">SYS.VER.2.4 // ZERO-BOREDOM</div>
+                </div>
+                <div class="creator-tactical-pill">
+                    <span class="led-status"></span> ARCHITECT: BHAGATH KRISHNA.M
+                </div>
+            </div>
+
+            <div class="nav-actions">
+                <a href="https://github.com/bhagathkrishna57/kura-play.git" target="_blank" rel="noopener" class="btn-nav" title="View Source on GitHub">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style="display:inline-block; vertical-align:middle; margin-right:3px;">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                    <span>GITHUB</span>
+                </a>
+                <button class="btn-nav btn-skip-tactical" id="global-skip-btn" title="Skip to a new game instantly (Press 'N')">
+                    <span>⏭</span> JUMP SECTOR <span style="font-size: 10px; opacity: 0.7;">[N]</span>
+                </button>
+                <button class="btn-nav" id="open-party-btn">
+                    <span>👥</span> PARTY LOBBY
+                </button>
+                <button class="btn-nav" id="open-leaderboard-btn">
+                    <span>🏆</span> RECORDS
+                </button>
+                <button class="btn-nav" id="toggle-sound-btn">
+                    <span id="sound-icon">🔊</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Hub Grid (Game Selection View) -->
+        <main id="main-hub-view">
+            <div class="hub-editorial-hero">
+                <div class="hero-left-col">
+                    <div class="hero-telemetry-tag">
+                        <span class="led-status"></span> ARCHIVE ACCESS GRANTED // PROTOCOL ACTIVE
+                    </div>
+                    <h1 class="hero-title-main">Tactical Gaming Matrix</h1>
+                    <p class="hero-desc-tactical">Bespoke mini-games engineered for immediate reflex engagement. Zero tutorials, zero boredom. Press <strong>[N]</strong> anytime to instantly warp across sectors.</p>
+                </div>
+                <div class="hero-right-meta">
+                    <div class="meta-metric">INPUT LATENCY: <strong>0.1 MS</strong></div>
+                    <div class="meta-metric">ENGINE: <strong>DIRECT CANVAS 2D</strong></div>
+                    <div class="meta-metric">ARCHITECT: <strong>BHAGATH KRISHNA.M</strong></div>
+                </div>
+            </div>
+
+            <div class="games-grid" id="games-card-container">
+                <!-- Slot 1: Aim Matrix -->
+                <div class="game-console-card" data-game="aim-matrix">
+                    <div class="card-slot-header">
+                        <span class="slot-code">[SECTOR 01] // PRECISION AIM</span>
+                        <span class="slot-status-led"></span>
+                    </div>
+                    <div class="card-mini-viewport">
+                        <canvas class="card-mini-canvas"></canvas>
+                        <div class="card-corner-tech tl"></div>
+                        <div class="card-corner-tech tr"></div>
+                        <div class="card-corner-tech bl"></div>
+                        <div class="card-corner-tech br"></div>
+                    </div>
+                    <div class="card-body">
+                        <div>
+                            <h3 class="card-game-title">Aim Matrix</h3>
+                            <p class="card-tactical-desc">High-precision flick & tracking trainer. Neutralize holographic targets before their perimeter rings collapse.</p>
+                        </div>
+                        <div class="card-telemetry-row">
+                            <span class="card-high-stat" id="stat-aim-matrix">BEST: 0 PTS</span>
+                            <div class="card-engage-btn">ENGAGE ➔</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Slot 2: Neon Dash -->
+                <div class="game-console-card" data-game="neon-dash">
+                    <div class="card-slot-header">
+                        <span class="slot-code">[SECTOR 02] // RELATIVISTIC RUNNER</span>
+                        <span class="slot-status-led"></span>
+                    </div>
+                    <div class="card-mini-viewport">
+                        <canvas class="card-mini-canvas"></canvas>
+                        <div class="card-corner-tech tl"></div>
+                        <div class="card-corner-tech tr"></div>
+                        <div class="card-corner-tech bl"></div>
+                        <div class="card-corner-tech br"></div>
+                    </div>
+                    <div class="card-body">
+                        <div>
+                            <h3 class="card-game-title">Neon Dash</h3>
+                            <p class="card-tactical-desc">Adrenaline gravity flipper. Invert gravity between ceiling and floor at 70+ KM/H through deadly laser arrays.</p>
+                        </div>
+                        <div class="card-telemetry-row">
+                            <span class="card-high-stat" id="stat-neon-dash">BEST: 0m</span>
+                            <div class="card-engage-btn">ENGAGE ➔</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Slot 3: Flash Reflex -->
+                <div class="game-console-card" data-game="flash-reflex">
+                    <div class="card-slot-header">
+                        <span class="slot-code">[SECTOR 03] // SYNAPTIC DUEL</span>
+                        <span class="slot-status-led"></span>
+                    </div>
+                    <div class="card-mini-viewport">
+                        <canvas class="card-mini-canvas"></canvas>
+                        <div class="card-corner-tech tl"></div>
+                        <div class="card-corner-tech tr"></div>
+                        <div class="card-corner-tech bl"></div>
+                        <div class="card-corner-tech br"></div>
+                    </div>
+                    <div class="card-body">
+                        <div>
+                            <h3 class="card-game-title">Flash Reflex</h3>
+                            <p class="card-tactical-desc">High-stakes reaction showdown. Hold through unpredictable suspense and strike the exact millisecond the cue flashes.</p>
+                        </div>
+                        <div class="card-telemetry-row">
+                            <span class="card-high-stat" id="stat-flash-reflex">BEST: -- MS</span>
+                            <div class="card-engage-btn">ENGAGE ➔</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Slot 4: Cyber Slicer -->
+                <div class="game-console-card" data-game="cyber-slicer">
+                    <div class="card-slot-header">
+                        <span class="slot-code">[SECTOR 04] // KINETIC BLADE</span>
+                        <span class="slot-status-led"></span>
+                    </div>
+                    <div class="card-mini-viewport">
+                        <canvas class="card-mini-canvas"></canvas>
+                        <div class="card-corner-tech tl"></div>
+                        <div class="card-corner-tech tr"></div>
+                        <div class="card-corner-tech bl"></div>
+                        <div class="card-corner-tech br"></div>
+                    </div>
+                    <div class="card-body">
+                        <div>
+                            <h3 class="card-game-title">Cyber Slicer</h3>
+                            <p class="card-tactical-desc">Cast your neon laser blade ribbon. Slice flying energy cores into halves, chain multi-combos, and dodge hazard mines.</p>
+                        </div>
+                        <div class="card-telemetry-row">
+                            <span class="card-high-stat" id="stat-cyber-slicer">BEST: 0 PTS</span>
+                            <div class="card-engage-btn">ENGAGE ➔</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="arcade-console-footer">
+                <div class="footer-architect">
+                    <span class="led-status"></span> ARCHITECT & CREATOR: <strong>BHAGATH KRISHNA.M</strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <a href="https://github.com/bhagathkrishna57/kura-play.git" target="_blank" rel="noopener" style="color: var(--neon-cyan); text-decoration: none; font-size: 11px; letter-spacing: 1px;">
+                        GITHUB / KURA-PLAY ↗
+                    </a>
+                    <span style="color: rgba(255,255,255,0.2);">|</span>
+                    <div style="letter-spacing: 2px;">KURA ARCADE OS // ZERO-BOREDOM PROTOCOL</div>
+                </div>
+            </footer>
+        </main>
+
+        <!-- Active Game Stage View -->
+        <section id="game-stage-view" class="hidden">
+            <!-- Dedicated Top-Left Go Back Button -->
+            <button class="corner-back-btn" id="corner-back-btn" title="Go Back to Games Menu (Esc / Back)">
+                <span>←</span> BACK
+            </button>
+
+            <!-- Floating In-Game HUD -->
+            <div class="ingame-top-hud">
+                <div class="hud-title-badge">
+                    <span id="current-game-icon">🎮</span>
+                    <span id="current-game-title">GAME</span>
+                </div>
+                <button class="hud-btn" id="hud-mode-toggle" title="Switch 1-Player vs 2-Player on same keyboard">MODE: SOLO</button>
+                <button class="hud-btn skip-highlight" id="hud-skip-btn" title="Skip to next game (N)">⏭ SKIP (N)</button>
+                <button class="hud-btn" id="hud-back-btn" title="Exit to Games Menu">← BACK</button>
+            </div>
+
+            <!-- Active Canvas -->
+            <canvas id="active-game-canvas"></canvas>
+
+            <!-- Game Over / Victory Modal -->
+            <div class="game-over-overlay" id="round-over-overlay">
+                <div class="game-over-card">
+                    <h2 class="game-over-title win" id="go-title">ROUND WON!</h2>
+                    <p class="game-over-score" id="go-score">Score: 240</p>
+                    <div class="game-over-actions">
+                        <button class="btn-retry" id="go-retry-btn">PLAY AGAIN [SPACE]</button>
+                        <button class="btn-next-game" id="go-next-btn">TRY ANOTHER GAME [N]</button>
+                        <button class="hud-btn" id="go-hub-btn">BACK TO HUB</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Party Room Lobby Modal -->
+    <div class="modal-overlay" id="party-modal">
+        <div class="modal-box">
+            <button class="modal-close" id="close-party-modal">✕</button>
+            <h2 class="modal-title">Party Lobby</h2>
+            <p class="modal-subtitle">Connect with friends via WebRTC room codes to battle and compete on the live leaderboard.</p>
+
+            <div class="input-group">
+                <label class="input-label">YOUR CALLSIGN</label>
+                <input type="text" id="player-name-input" class="text-input" placeholder="Enter username">
+            </div>
+
+            <div class="room-code-display" id="room-code-box">
+                <div>
+                    <div style="font-size: 11px; color: var(--text-muted);">ACTIVE ROOM CODE</div>
+                    <div class="room-code-text" id="display-room-code">NOT HOSTING</div>
+                </div>
+                <button class="btn-copy-code" id="btn-create-room">CREATE ROOM</button>
+            </div>
+
+            <div class="input-group">
+                <label class="input-label">JOIN A FRIEND'S ROOM</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="join-room-input" class="text-input" placeholder="e.g. KURA-782">
+                    <button class="btn-nav" id="btn-join-room" style="white-space: nowrap;">JOIN</button>
+                </div>
+            </div>
+
+            <label class="input-label">PLAYERS IN LOBBY (<span id="player-count">1</span>)</label>
+            <div class="peers-list" id="peers-list-container">
+                <div class="peer-chip">
+                    <span id="local-peer-name">You (Host)</span>
+                    <span style="color: var(--neon-green); font-size: 11px;">READY</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaderboard Modal -->
+    <div class="modal-overlay" id="leaderboard-modal">
+        <div class="modal-box">
+            <button class="modal-close" id="close-leaderboard-modal">✕</button>
+            <h2 class="modal-title">Arcade Records</h2>
+            <p class="modal-subtitle">Personal bests and room standings.</p>
+
+            <table class="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th>GAME</th>
+                        <th>RECORD STAT</th>
+                        <th>GAMES PLAYED</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-table-body">
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Core Architecture Scripts (Runs directly in browser via file:/// or http://) -->
+    <script src="js/sound.js"></script>
+    <script src="js/site-loader.js"></script>
+    <script src="js/leaderboard.js"></script>
+    <script src="js/multiplayer.js"></script>
+    <script src="js/games/aim-matrix.js"></script>
+    <script src="js/games/neon-dash.js"></script>
+    <script src="js/games/flash-reflex.js"></script>
+    <script src="js/games/cyber-slicer.js"></script>
+    <script src="js/card-previews.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

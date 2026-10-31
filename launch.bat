@@ -1,0 +1,3 @@
+@echo off
+echo Starting KURA Cyber-Arcade in your default browser...
+start "" "%~dp0index.html"

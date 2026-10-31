@@ -1,0 +1,506 @@
+// Main Application Orchestrator for KURA Cyber-Arcade
+
+class ArcadeHub {
+    constructor() {
+        this.currentGame = null;
+        this.currentGameId = null;
+        this.currentMode = 'solo';
+        this.availableGames = ['aim-matrix', 'neon-dash', 'flash-reflex', 'cyber-slicer'];
+
+        this.initDOM();
+        this.initBackgroundCanvas();
+        this.bindEvents();
+        this.refreshStats();
+        this.checkUrlRoom();
+    }
+
+    initDOM() {
+        this.hubView = document.getElementById('main-hub-view');
+        this.stageView = document.getElementById('game-stage-view');
+        this.activeCanvas = document.getElementById('active-game-canvas');
+        this.roundOverOverlay = document.getElementById('round-over-overlay');
+
+        this.partyModal = document.getElementById('party-modal');
+        this.leaderboardModal = document.getElementById('leaderboard-modal');
+
+        this.playerNameInput = document.getElementById('player-name-input');
+        if (this.playerNameInput && window.KuraMultiplayer) {
+            this.playerNameInput.value = window.KuraMultiplayer.localPlayerName;
+        }
+
+        this.resizeActiveCanvas();
+        window.addEventListener('resize', () => this.resizeActiveCanvas());
+    }
+
+    resizeActiveCanvas() {
+        if (!this.activeCanvas) return;
+        this.activeCanvas.width = window.innerWidth;
+        this.activeCanvas.height = window.innerHeight;
+    }
+
+    initBackgroundCanvas() {
+        const bgCanvas = document.getElementById('bg-canvas');
+        if (!bgCanvas) return;
+        const ctx = bgCanvas.getContext('2d');
+
+        let w = (bgCanvas.width = window.innerWidth);
+        let h = (bgCanvas.height = window.innerHeight);
+
+        window.addEventListener('resize', () => {
+            w = bgCanvas.width = window.innerWidth;
+            h = bgCanvas.height = window.innerHeight;
+        });
+
+        const particles = [];
+        const count = 65;
+        let mouseX = w / 2;
+        let mouseY = h / 2;
+
+        for (let i = 0; i < count; i++) {
+            particles.push({
+                x: Math.random() * w,
+                y: Math.random() * h,
+                vx: (Math.random() - 0.5) * 0.8,
+                vy: (Math.random() - 0.5) * 0.8,
+                size: Math.random() * 2 + 1,
+                color: i % 3 === 0 ? 'rgba(0, 245, 160, 0.4)' : 'rgba(0, 217, 245, 0.3)'
+            });
+        }
+
+        window.addEventListener('pointermove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        const renderBg = () => {
+            ctx.clearRect(0, 0, w, h);
+
+            for (let i = 0; i < particles.length; i++) {
+                const p1 = particles[i];
+                p1.x += p1.vx;
+                p1.y += p1.vy;
+
+                if (p1.x < 0) p1.x = w;
+                if (p1.x > w) p1.x = 0;
+                if (p1.y < 0) p1.y = h;
+                if (p1.y > h) p1.y = 0;
+
+                const dmx = p1.x - mouseX;
+                const dmy = p1.y - mouseY;
+                const dMouse = Math.hypot(dmx, dmy);
+                if (dMouse < 120) {
+                    p1.x += (dmx / dMouse) * 1.5;
+                    p1.y += (dmy / dMouse) * 1.5;
+                }
+
+                ctx.fillStyle = p1.color;
+                ctx.beginPath();
+                ctx.arc(p1.x, p1.y, p1.size, 0, Math.PI * 2);
+                ctx.fill();
+
+                for (let j = i + 1; j < particles.length; j++) {
+                    const p2 = particles[j];
+                    const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+                    if (dist < 110) {
+                        ctx.beginPath();
+                        ctx.moveTo(p1.x, p1.y);
+                        ctx.lineTo(p2.x, p2.y);
+                        ctx.strokeStyle = `rgba(0, 217, 245, ${0.15 * (1 - dist / 110)})`;
+                        ctx.lineWidth = 0.8;
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            requestAnimationFrame(renderBg);
+        };
+
+        renderBg();
+    }
+
+    bindEvents() {
+        const soundBtn = document.getElementById('toggle-sound-btn');
+        const soundIcon = document.getElementById('sound-icon');
+        if (soundBtn && window.KuraSounds) {
+            soundBtn.addEventListener('click', () => {
+                const isMuted = window.KuraSounds.toggleMute();
+                soundIcon.textContent = isMuted ? '🔇' : '🔊';
+            });
+        }
+
+        // Return to Hub / Go Back
+        document.getElementById('nav-brand-btn').addEventListener('click', () => {
+            if (window.KuraSounds) window.KuraSounds.playClick();
+            this.goBack();
+        });
+
+        const backButtons = [
+            document.getElementById('corner-back-btn'),
+            document.getElementById('hud-back-btn'),
+            document.getElementById('go-hub-btn')
+        ];
+        backButtons.forEach(btn => {
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    if (window.KuraSounds) window.KuraSounds.playClick();
+                    this.goBack();
+                });
+            }
+        });
+
+        // Browser Native Back/Forward Button Integration
+        window.addEventListener('popstate', (e) => {
+            if (this.partyModal && this.partyModal.classList.contains('active')) {
+                this.partyModal.classList.remove('active');
+                return;
+            }
+            if (this.leaderboardModal && this.leaderboardModal.classList.contains('active')) {
+                this.leaderboardModal.classList.remove('active');
+                return;
+            }
+            if (this.currentGameId) {
+                this.showHub(false);
+            }
+        });
+
+        const skipBtns = [
+            document.getElementById('global-skip-btn'),
+            document.getElementById('hud-skip-btn'),
+            document.getElementById('go-next-btn')
+        ];
+        skipBtns.forEach(btn => {
+            if (btn) btn.addEventListener('click', () => this.skipToNextGame());
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT') return;
+
+            // Space / Enter to Play Again when game over screen is showing
+            if (e.code === 'Space' || e.key === ' ' || e.code === 'Enter') {
+                if (this.roundOverOverlay && this.roundOverOverlay.classList.contains('active')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.retryGame();
+                    return;
+                }
+            }
+
+            if (e.key === 'n' || e.key === 'N') {
+                e.preventDefault();
+                this.skipToNextGame();
+            } else if (e.key === 'Escape' || e.key === 'Backspace') {
+                this.goBack();
+            }
+        });
+
+        document.querySelectorAll('.game-console-card, .game-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const gameId = card.getAttribute('data-game');
+                if (window.KuraSounds) window.KuraSounds.playClick();
+                this.launchGame(gameId);
+            });
+        });
+
+        document.getElementById('hud-hub-btn').addEventListener('click', () => {
+            if (window.KuraSounds) window.KuraSounds.playClick();
+            this.showHub();
+        });
+
+        document.getElementById('hud-mode-toggle').addEventListener('click', (e) => {
+            if (window.KuraSounds) window.KuraSounds.playClick();
+            this.currentMode = this.currentMode === 'solo' ? 'local_2p' : 'solo';
+            e.currentTarget.textContent = `MODE: ${this.currentMode === 'solo' ? 'SOLO' : '2-PLAYER'}`;
+            if (this.currentGameId) {
+                this.launchGame(this.currentGameId);
+            }
+        });
+
+        document.getElementById('go-retry-btn').addEventListener('click', () => {
+            this.retryGame();
+        });
+
+        document.getElementById('go-hub-btn').addEventListener('click', () => {
+            if (window.KuraSounds) window.KuraSounds.playClick();
+            this.showHub();
+        });
+
+        document.getElementById('open-party-btn').addEventListener('click', () => {
+            if (window.KuraSounds) window.KuraSounds.playClick();
+            this.openPartyModal();
+        });
+
+        document.getElementById('close-party-modal').addEventListener('click', () => {
+            if (window.KuraSounds) window.KuraSounds.playClick();
+            this.partyModal.classList.remove('active');
+        });
+
+        document.getElementById('btn-create-room').addEventListener('click', () => {
+            if (window.KuraSounds) window.KuraSounds.playClick();
+            this.createPartyRoom();
+        });
+
+        document.getElementById('btn-join-room').addEventListener('click', () => {
+            const input = document.getElementById('join-room-input');
+            if (input && input.value) {
+                if (window.KuraSounds) window.KuraSounds.playClick();
+                this.joinPartyRoom(input.value);
+            }
+        });
+
+        if (this.playerNameInput) {
+            this.playerNameInput.addEventListener('change', () => {
+                if (window.KuraMultiplayer) window.KuraMultiplayer.setPlayerName(this.playerNameInput.value);
+            });
+        }
+
+        document.getElementById('open-leaderboard-btn').addEventListener('click', () => {
+            if (window.KuraSounds) window.KuraSounds.playClick();
+            this.openLeaderboardModal();
+        });
+
+        document.getElementById('close-leaderboard-modal').addEventListener('click', () => {
+            if (window.KuraSounds) window.KuraSounds.playClick();
+            this.leaderboardModal.classList.remove('active');
+        });
+    }
+
+    goBack() {
+        if (this.partyModal && this.partyModal.classList.contains('active')) {
+            this.partyModal.classList.remove('active');
+            return;
+        }
+        if (this.leaderboardModal && this.leaderboardModal.classList.contains('active')) {
+            this.leaderboardModal.classList.remove('active');
+            return;
+        }
+        if (this.currentGameId) {
+            if (window.history.length > 1 && window.location.hash) {
+                window.history.back();
+            } else {
+                this.showHub(true);
+            }
+        }
+    }
+
+    retryGame() {
+        if (!this.currentGameId) return;
+        if (window.KuraSounds) window.KuraSounds.playClick();
+        if (this.roundOverOverlay) {
+            this.roundOverOverlay.classList.remove('active');
+            this.roundOverOverlay.style.display = 'none';
+        }
+        this.launchGame(this.currentGameId);
+    }
+
+    showHub(updateHistory = true) {
+        if (this.currentGame) {
+            this.currentGame.destroy();
+            this.currentGame = null;
+        }
+        this.currentGameId = null;
+        if (this.roundOverOverlay) {
+            this.roundOverOverlay.classList.remove('active');
+            this.roundOverOverlay.style.display = 'none';
+        }
+        this.stageView.classList.add('hidden');
+        this.hubView.classList.remove('hidden');
+        this.refreshStats();
+
+        if (updateHistory && window.location.hash) {
+            history.pushState({ view: 'hub' }, '', window.location.pathname);
+        }
+    }
+
+    launchGame(gameId) {
+        const GameClass = window.KuraGames ? window.KuraGames[gameId] : null;
+        if (!GameClass) return;
+
+        if (this.currentGame) {
+            this.currentGame.destroy();
+            this.currentGame = null;
+        }
+
+        this.currentGameId = gameId;
+        if (this.roundOverOverlay) {
+            this.roundOverOverlay.classList.remove('active');
+            this.roundOverOverlay.style.display = 'none';
+        }
+        this.hubView.classList.add('hidden');
+        this.stageView.classList.remove('hidden');
+        this.resizeActiveCanvas();
+
+        // Push state for browser Back button support
+        try {
+            history.pushState({ view: 'game', gameId }, '', '#' + gameId);
+        } catch (e) {}
+
+        const instance = new GameClass(this.activeCanvas, (result) => this.handleGameOver(result));
+
+        document.getElementById('current-game-title').textContent = instance.meta.title.toUpperCase();
+        document.getElementById('current-game-icon').textContent = instance.meta.icon;
+
+        // Start game instantly — no loading animation
+        this.currentGame = instance;
+        instance.start({ mode: this.currentMode });
+    }
+
+    skipToNextGame() {
+        if (window.KuraSounds) window.KuraSounds.playClick();
+        if (this.roundOverOverlay) {
+            this.roundOverOverlay.classList.remove('active');
+            this.roundOverOverlay.style.display = 'none';
+        }
+        let nextIndex = 0;
+        if (this.currentGameId) {
+            const curIdx = this.availableGames.indexOf(this.currentGameId);
+            nextIndex = (curIdx + 1) % this.availableGames.length;
+        } else {
+            nextIndex = Math.floor(Math.random() * this.availableGames.length);
+        }
+        const nextGameId = this.availableGames[nextIndex];
+        this.launchGame(nextGameId);
+    }
+
+    handleGameOver(result) {
+        const goOverlay = this.roundOverOverlay;
+        const titleEl = document.getElementById('go-title');
+        const scoreEl = document.getElementById('go-score');
+
+        titleEl.textContent = result.title;
+        titleEl.className = `game-over-title ${result.won ? 'win' : 'lose'}`;
+        scoreEl.textContent = result.score;
+
+        if (goOverlay) {
+            goOverlay.style.display = 'flex';
+            // Force reflow before adding active for instant transition
+            void goOverlay.offsetWidth;
+            goOverlay.classList.add('active');
+        }
+        this.refreshStats();
+    }
+
+    refreshStats() {
+        if (!window.KuraLeaderboard) return;
+        const stats = window.KuraLeaderboard.localStats;
+        const statAim = document.getElementById('stat-aim-matrix');
+        const statNeon = document.getElementById('stat-neon-dash');
+        const statFlash = document.getElementById('stat-flash-reflex');
+        const statSlicer = document.getElementById('stat-cyber-slicer');
+
+        if (statAim && stats['aim-matrix']) statAim.textContent = `SCORE: ${stats['aim-matrix'].highScore || 0}`;
+        if (statNeon && stats['neon-dash']) statNeon.textContent = `BEST: ${stats['neon-dash'].highScore || 0}m`;
+        if (statFlash && stats['flash-reflex']) {
+            const ms = stats['flash-reflex'].bestMs;
+            statFlash.textContent = `BEST: ${ms && ms !== 9999 ? ms + 'ms' : '--'}`;
+        }
+        if (statSlicer && stats['cyber-slicer']) statSlicer.textContent = `SCORE: ${stats['cyber-slicer'].highScore || 0}`;
+    }
+
+    openPartyModal() {
+        this.partyModal.classList.add('active');
+        const displayCode = document.getElementById('display-room-code');
+        if (window.KuraMultiplayer && window.KuraMultiplayer.roomId) {
+            displayCode.textContent = window.KuraMultiplayer.roomId;
+        }
+    }
+
+    createPartyRoom() {
+        if (!window.KuraMultiplayer) return;
+        window.KuraMultiplayer.createRoom((res) => {
+            if (res.success) {
+                const displayCode = document.getElementById('display-room-code');
+                displayCode.textContent = res.roomId;
+
+                const btn = document.getElementById('btn-create-room');
+                btn.textContent = 'COPIED CODE!';
+                navigator.clipboard.writeText(res.roomId).catch(() => {});
+                setTimeout(() => { btn.textContent = 'COPY CODE'; }, 2000);
+
+                this.updatePeersList();
+            }
+        });
+    }
+
+    joinPartyRoom(code) {
+        if (!window.KuraMultiplayer) return;
+        window.KuraMultiplayer.joinRoom(code, (res) => {
+            if (res.success) {
+                document.getElementById('display-room-code').textContent = code.toUpperCase();
+                alert(`Connected to Room: ${code.toUpperCase()}!`);
+                this.updatePeersList();
+            } else {
+                alert(`Join Failed: ${res.error}`);
+            }
+        });
+    }
+
+    updatePeersList() {
+        const container = document.getElementById('peers-list-container');
+        const countEl = document.getElementById('player-count');
+        if (!container || !window.KuraMultiplayer) return;
+
+        const mp = window.KuraMultiplayer;
+        const players = mp.peersList.length ? mp.peersList : [{ name: mp.localPlayerName, isHost: true }];
+        countEl.textContent = players.length;
+
+        container.innerHTML = players.map(p => `
+            <div class="peer-chip">
+                <span>${p.name} ${p.isHost ? '(Host)' : ''}</span>
+                <span style="color: var(--neon-green); font-size: 11px;">CONNECTED</span>
+            </div>
+        `).join('');
+    }
+
+    openLeaderboardModal() {
+        this.leaderboardModal.classList.add('active');
+        const tbody = document.getElementById('leaderboard-table-body');
+        if (!tbody || !window.KuraLeaderboard) return;
+
+        const stats = window.KuraLeaderboard.localStats;
+        const rows = [
+            {
+                name: '🎯 Aim Matrix',
+                stat: `${stats['aim-matrix']?.highScore || 0} pts`,
+                played: stats['aim-matrix']?.gamesPlayed || 0
+            },
+            {
+                name: '⚡ Neon Dash',
+                stat: `${stats['neon-dash']?.highScore || 0} meters`,
+                played: stats['neon-dash']?.gamesPlayed || 0
+            },
+            {
+                name: '⚡ Flash Reflex',
+                stat: `${stats['flash-reflex']?.bestMs && stats['flash-reflex'].bestMs !== 9999 ? stats['flash-reflex'].bestMs + ' ms' : 'None yet'}`,
+                played: stats['flash-reflex']?.gamesPlayed || 0
+            },
+            {
+                name: '⚔️ Cyber Slicer',
+                stat: `${stats['cyber-slicer']?.highScore || 0} pts`,
+                played: stats['cyber-slicer']?.gamesPlayed || 0
+            }
+        ];
+
+        tbody.innerHTML = rows.map((r) => `
+            <tr>
+                <td><strong>${r.name}</strong></td>
+                <td style="color: var(--neon-cyan); font-family: 'JetBrains Mono', monospace;">${r.stat}</td>
+                <td style="color: var(--text-muted); font-family: 'JetBrains Mono', monospace;">${r.played} rounds</td>
+            </tr>
+        `).join('');
+    }
+
+    checkUrlRoom() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomCode = urlParams.get('room');
+        if (roomCode) {
+            this.openPartyModal();
+            const joinInput = document.getElementById('join-room-input');
+            if (joinInput) joinInput.value = roomCode;
+            this.joinPartyRoom(roomCode);
+        }
+    }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    window.kuraArcade = new ArcadeHub();
+});
