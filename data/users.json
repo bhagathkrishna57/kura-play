@@ -178,7 +178,21 @@
     "email": "",
     "total_games": 1,
     "party_wins": 0,
-    "unlocked_medals": "[\"sub_150ms_reflex\"]",
+    "unlocked_medals": "[\"sub_150ms_reflex\",\"top_10_legend\"]",
+    "createdAt": "2026-11-14"
+  },
+  "TEST_PILOT_VERIF": {
+    "username": "TEST_PILOT_VERIF",
+    "sector": "AIM MATRIX",
+    "primary_sector": "AIM MATRIX",
+    "role": "PILOT",
+    "avatar_id": 1,
+    "avatar": "https://lh3.googleusercontent.com/a/test-avatar-photo",
+    "bio": "",
+    "email": "test.pilot@gmail.com",
+    "total_games": 0,
+    "party_wins": 0,
+    "unlocked_medals": "[]",
     "createdAt": "2026-11-14"
   }
 }

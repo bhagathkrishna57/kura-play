@@ -752,7 +752,7 @@ const server = http.createServer(async (req, res) => {
     // API: GOOGLE AUTHENTICATION (OAUTH / ONE-CLICK PILOT LOGIN)
     // -------------------------------------------------------------
     if (pathname === '/api/auth/google' && req.method === 'POST') {
-        const { name, email, picture } = await parseBody(req);
+        const { name, email, picture, uid } = await parseBody(req);
         if (!name && !email) {
             return sendJSON(res, 400, { error: 'Missing name or email from Google auth payload.' });
         }
@@ -766,12 +766,35 @@ const server = http.createServer(async (req, res) => {
             const hash = hashPassword(`google_${Date.now()}_${Math.random()}`, salt);
             const now = new Date().toISOString().split('T')[0];
             const insert = db.prepare(`
-                INSERT INTO users (username, password_hash, salt, sector, role, created_at)
-                VALUES (?, ?, ?, 'ALL SECTORS', 'PILOT', ?)
+                INSERT INTO users (username, password_hash, salt, sector, role, created_at, avatar, email)
+                VALUES (?, ?, ?, 'ALL SECTORS', 'PILOT', ?, ?, ?)
             `);
-            const result = insert.run(cleanUser, hash, salt, now);
-            user = { id: Number(result.lastInsertRowid), username: cleanUser, sector: 'ALL SECTORS', role: 'PILOT' };
+            const result = insert.run(cleanUser, hash, salt, now, picture || '', email || '');
+            user = { 
+                id: Number(result.lastInsertRowid), 
+                username: cleanUser, 
+                sector: 'ALL SECTORS', 
+                role: 'PILOT',
+                avatar: picture || '',
+                avatar_id: 1,
+                bio: '',
+                email: email || ''
+            };
             exportJSONSnapshots();
+        } else {
+            // Update picture or email if missing on existing pilot profile
+            if (picture && (!user.avatar || user.avatar === '')) {
+                try {
+                    db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(picture, user.id);
+                    user.avatar = picture;
+                } catch(e) {}
+            }
+            if (email && (!user.email || user.email === '')) {
+                try {
+                    db.prepare('UPDATE users SET email = ? WHERE id = ?').run(email, user.id);
+                    user.email = email;
+                } catch(e) {}
+            }
         }
 
         const token = generateToken();
@@ -782,7 +805,19 @@ const server = http.createServer(async (req, res) => {
 
         return sendJSON(res, 200, {
             success: true,
-            user: { username: cleanUser, sector: user.sector, role: user.role, provider: 'google', email, picture },
+            user: { 
+                id: user.id,
+                username: cleanUser, 
+                sector: user.primary_sector || user.sector || 'ALL SECTORS', 
+                role: user.role || 'PILOT', 
+                provider: 'google', 
+                email: user.email || email || '', 
+                picture: user.avatar || picture || '',
+                avatar: user.avatar || picture || '',
+                avatar_id: user.avatar_id || 1,
+                bio: user.bio || '',
+                uid: uid || ''
+            },
             token
         }, { 'Set-Cookie': `kura_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000` });
     }

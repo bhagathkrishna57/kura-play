@@ -50,6 +50,12 @@
                 </div>
             </div>
 
+            <!-- Auth Loading State Indicator -->
+            <div id="gate-auth-loader" class="gate-auth-loader hidden" style="margin-bottom: 14px; padding: 10px 14px; background: rgba(0, 243, 255, 0.08); border: 1px solid rgba(0, 243, 255, 0.3); border-radius: 6px; display: flex; align-items: center; justify-content: center; gap: 10px; font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: #00f3ff; letter-spacing: 0.08em;">
+                <span class="led-status" style="background: #00f3ff; box-shadow: 0 0 8px #00f3ff; animation: pulseLed 1s infinite alternate;"></span>
+                <span id="gate-auth-loader-text">VERIFYING NEURAL AUTHENTICATION...</span>
+            </div>
+
             <div id="gate-error-banner" class="auth-error-banner hidden" style="margin-bottom: 14px;"></div>
 
             <!-- Gate Login Form -->
@@ -889,6 +895,7 @@
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="js/sound.js?v=4.2"></script>
     <script src="js/site-loader.js?v=4.2"></script>
+    <script type="module" src="js/firebase-config.js"></script>
     <script src="js/server-client.js?v=4.2"></script>
     <script src="js/leaderboard.js?v=4.2"></script>
     <script src="js/multiplayer.js?v=4.2"></script>

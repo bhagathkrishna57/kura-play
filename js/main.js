@@ -57,6 +57,7 @@ class ArcadeHub {
         this.initMandatoryGate();
         this.initPilotAuth();
         this.initPilotProfile();
+        this.initFirebaseSessionSync();
     }
 
     resizeActiveCanvas() {
@@ -667,6 +668,10 @@ class ArcadeHub {
     }
 
     openPartyModal() {
+        if (!window.KuraServer || !window.KuraServer.currentUser) {
+            this.showAuthGate('AUTHENTICATION REQUIRED // GUEST MULTIPLAYER DISABLED');
+            return;
+        }
         if (!this.partyModal) return;
         this.partyModal.classList.add('active');
         const displayCode = document.getElementById('display-room-code');
@@ -839,9 +844,14 @@ class ArcadeHub {
         }
 
         // Gate state check on startup
+        this.authLoading = true;
+        const gateLoader = document.getElementById('gate-auth-loader');
         if (window.KuraServer && window.KuraServer.currentUser) {
+            if (gateLoader) gateLoader.classList.add('hidden');
+            this.authLoading = false;
             this.hideAuthGate();
         } else {
+            if (gateLoader) gateLoader.classList.remove('hidden');
             this.showAuthGate();
         }
     }
@@ -875,9 +885,20 @@ class ArcadeHub {
     }
 
     async logout() {
+        // Sign out of Firebase Auth session
+        try {
+            if (window.KuraFirebase && window.KuraFirebase.signOutUser) {
+                await window.KuraFirebase.signOutUser();
+            }
+        } catch (err) {
+            console.warn('[KURA AUTH] Firebase signOut error:', err);
+        }
+
+        // Invalidate backend session token
         if (window.KuraServer) {
             await window.KuraServer.logout();
         }
+
         if (this.currentGame) {
             this.showHub(false);
         }
@@ -887,7 +908,7 @@ class ArcadeHub {
         if (this.pilotModal) this.pilotModal.classList.remove('active');
         if (this.profileModal) this.profileModal.classList.remove('active');
 
-        this.showAuthGate('Pilot logged out. Please authenticate with your callsign to enter the arcade matrix.');
+        this.showAuthGate('Pilot logged out. Please authenticate with Callsign or Google to enter.');
         this.updateAuthUI();
     }
 
@@ -907,32 +928,89 @@ class ArcadeHub {
         const gateGoogleBtn = document.getElementById('gate-google-signin-btn');
         const mandatoryGoogleBtn = document.getElementById('mandatory-google-signin-btn');
 
-        const triggerGoogleAuth = async () => {
+        // Official Firebase Google OAuth Authentication Flow
+        const triggerGoogleAuth = async (e) => {
             if (window.KuraSounds) window.KuraSounds.playClick();
             
-            let googleName = prompt('Enter Your Pilot Callsign / Display Name for Google Sign-In:', '');
-            if (!googleName || !googleName.trim()) return;
-            googleName = googleName.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
-            if (googleName.length < 3) googleName = `PILOT_${Math.floor(1000 + Math.random() * 9000)}`;
+            const clickedBtn = (e && e.currentTarget) || mandatoryGoogleBtn || googleBtn || gateGoogleBtn;
+            const originalHtml = clickedBtn ? clickedBtn.innerHTML : '';
+            if (clickedBtn) {
+                clickedBtn.disabled = true;
+                clickedBtn.innerHTML = `
+                    <svg class="google-svg-icon" viewBox="0 0 24 24" width="18" height="18" style="animation: spin 1s linear infinite;">
+                        <circle cx="12" cy="12" r="10" stroke="#00f3ff" stroke-width="3" fill="none" stroke-dasharray="32 10"/>
+                    </svg>
+                    <span>CONNECTING GOOGLE OAUTH...</span>
+                `;
+            }
 
-            const res = await window.KuraServer.loginWithGoogle({
-                name: googleName,
-                email: `${googleName.toLowerCase()}@gmail.com`,
-                picture: 'https://lh3.googleusercontent.com/a/default-user'
-            });
-
-            if (res.success) {
-                if (window.KuraSounds) window.KuraSounds.synthAccessGrantedSlam();
-                this.hideAuthGate();
-                this.closePilotModal();
-                this.updateAuthUI();
-                if (this.leaderboardModal && this.leaderboardModal.classList.contains('active')) {
-                    this.openLeaderboardModal();
+            try {
+                if (!window.KuraFirebase || !window.KuraFirebase.signInWithGoogle) {
+                    throw new Error('Firebase Auth module initializing. Please retry in a second.');
                 }
-            } else {
+
+                // Call official Firebase Google Popup
+                const authResult = await window.KuraFirebase.signInWithGoogle();
+
+                if (!authResult.success) {
+                    const failMsg = authResult.message || 'Google authentication was cancelled or failed.';
+                    if (this.gateError) {
+                        this.gateError.textContent = failMsg;
+                        this.gateError.classList.remove('hidden');
+                    }
+                    if (errorBanner) {
+                        errorBanner.textContent = failMsg;
+                        errorBanner.classList.remove('hidden');
+                    }
+                    return;
+                }
+
+                const fbUser = authResult.user;
+                const cleanName = (fbUser.displayName || fbUser.email.split('@')[0])
+                    .trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+
+                // Synchronize verified Google credentials with SQLite backend
+                const res = await window.KuraServer.loginWithGoogle({
+                    name: cleanName,
+                    email: fbUser.email,
+                    picture: fbUser.photoURL || '',
+                    uid: fbUser.uid
+                });
+
+                if (res.success) {
+                    if (window.KuraSounds) window.KuraSounds.synthAccessGrantedSlam();
+                    this.hideAuthGate();
+                    this.closePilotModal();
+                    this.updateAuthUI();
+                    if (this.leaderboardModal && this.leaderboardModal.classList.contains('active')) {
+                        this.openLeaderboardModal();
+                    }
+                } else {
+                    const serverMsg = res.error || 'Server rejected Google authentication.';
+                    if (this.gateError) {
+                        this.gateError.textContent = serverMsg;
+                        this.gateError.classList.remove('hidden');
+                    }
+                    if (errorBanner) {
+                        errorBanner.textContent = serverMsg;
+                        errorBanner.classList.remove('hidden');
+                    }
+                }
+            } catch (err) {
+                console.error('[KURA AUTH] Google Sign-In error:', err);
+                const exMsg = err.message || 'Authentication error encountered.';
                 if (this.gateError) {
-                    this.gateError.textContent = res.error || 'Google login failed.';
+                    this.gateError.textContent = exMsg;
                     this.gateError.classList.remove('hidden');
+                }
+                if (errorBanner) {
+                    errorBanner.textContent = exMsg;
+                    errorBanner.classList.remove('hidden');
+                }
+            } finally {
+                if (clickedBtn && originalHtml) {
+                    clickedBtn.disabled = false;
+                    clickedBtn.innerHTML = originalHtml;
                 }
             }
         };
@@ -1203,6 +1281,63 @@ class ArcadeHub {
     closePilotModal() {
         if (this.pilotModal) {
             this.pilotModal.classList.remove('active');
+        }
+    }
+
+    // ==============================================================
+    // FIREBASE AUTH GLOBAL OBSERVER (SINGLE SOURCE OF TRUTH)
+    // ==============================================================
+    initFirebaseSessionSync() {
+        const handleAuthChange = async (fbUser) => {
+            const gateLoader = document.getElementById('gate-auth-loader');
+            if (gateLoader) gateLoader.classList.add('hidden');
+            this.authLoading = false;
+
+            if (fbUser) {
+                console.info('⚡ [KURA FIREBASE] Verified Google User Active:', fbUser.email, fbUser.uid);
+                const current = window.KuraServer ? window.KuraServer.currentUser : null;
+                const cleanName = (fbUser.displayName || fbUser.email.split('@')[0])
+                    .trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+
+                // If no active session or session mismatch, synchronize with SQLite backend
+                if (!current || !window.KuraServer.token || (current.email !== fbUser.email && current.provider === 'google')) {
+                    const res = await window.KuraServer.loginWithGoogle({
+                        name: cleanName,
+                        email: fbUser.email,
+                        picture: fbUser.photoURL || '',
+                        uid: fbUser.uid
+                    });
+                    if (res.success) {
+                        this.hideAuthGate();
+                        this.updateAuthUI();
+                    }
+                } else {
+                    this.hideAuthGate();
+                    this.updateAuthUI();
+                }
+            } else {
+                console.info('⚡ [KURA FIREBASE] No Firebase user detected.');
+                const current = window.KuraServer ? window.KuraServer.currentUser : null;
+                // If the user's active session was a Google session, but Firebase reported null, force signout
+                if (current && current.provider === 'google') {
+                    if (window.KuraServer) window.KuraServer.saveLocalSession(null);
+                    this.showAuthGate('Google session expired. Please sign in again.');
+                    this.updateAuthUI();
+                } else if (!current) {
+                    this.showAuthGate();
+                }
+            }
+        };
+
+        if (window.KuraFirebase && window.KuraFirebase.onAuthStateChanged) {
+            window.KuraFirebase.onAuthStateChanged(handleAuthChange);
+        } else {
+            window.addEventListener('kura-firebase-ready', (e) => {
+                const fb = e.detail || window.KuraFirebase;
+                if (fb && fb.onAuthStateChanged) {
+                    fb.onAuthStateChanged(handleAuthChange);
+                }
+            }, { once: true });
         }
     }
 
