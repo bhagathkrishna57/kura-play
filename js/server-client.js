@@ -40,6 +40,11 @@ class KuraServerClient {
                     { username: 'BHAGATH_KRISHNA', score: 1850, date: '2026-10-31', verified: true, title: 'ARCADE ARCHITECT' },
                     { username: 'BLADE_MASTER', score: 1240, date: '2026-10-31', verified: true },
                     { username: 'LASER_CLAW', score: 890, date: '2026-10-30', verified: true }
+                ],
+                'pulse-deflector': [
+                    { username: 'BHAGATH_KRISHNA', score: 1680, date: '2026-10-31', verified: true, title: 'ARCADE ARCHITECT' },
+                    { username: 'SHIELD_WARDEN', score: 1120, date: '2026-10-31', verified: true },
+                    { username: 'PHOTON_PULSE', score: 840, date: '2026-10-30', verified: true }
                 ]
             };
             localStorage.setItem(this.offlineLeaderboardKey, JSON.stringify(seed));
@@ -213,10 +218,11 @@ class KuraServerClient {
         this.saveLocalSession(null);
     }
 
-    async fetchLeaderboard(gameId) {
+    async fetchLeaderboard(gameId, searchQuery = '') {
         // Try server
         try {
-            const res = await fetch(`${this.serverUrl}/api/leaderboard?game=${encodeURIComponent(gameId)}`, { mode: 'cors' });
+            const q = searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : '';
+            const res = await fetch(`${this.serverUrl}/api/leaderboard?game=${encodeURIComponent(gameId)}${q}`, { mode: 'cors' });
             if (res.ok) {
                 const data = await res.json();
                 if (data.scores) return data.scores;
@@ -227,7 +233,12 @@ class KuraServerClient {
         // Fallback store
         try {
             const data = JSON.parse(localStorage.getItem(this.offlineLeaderboardKey) || '{}');
-            return data[gameId] || [];
+            let list = data[gameId] || [];
+            if (searchQuery) {
+                const term = searchQuery.toUpperCase();
+                list = list.filter(item => item.username.includes(term));
+            }
+            return list;
         } catch (e) {
             return [];
         }

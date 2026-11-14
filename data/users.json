@@ -11,5 +11,14 @@
     "hash": "75f3bf0a3955ebbe4d2d1370e4772adb2b4e2bf1285efc0b47b21c4ed77e125a",
     "sector": "AIM MATRIX",
     "createdAt": "2026-10-31"
+  },
+  "ZACK": {
+    "username": "ZACK",
+    "email": "zack@gmail.com",
+    "provider": "google",
+    "picture": "https://lh3.googleusercontent.com/a/default-user",
+    "sector": "GLOBAL PILOT",
+    "verified": true,
+    "createdAt": "2026-11-14"
   }
 }

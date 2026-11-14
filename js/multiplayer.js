@@ -38,12 +38,32 @@ class MultiplayerEngine {
         });
     }
 
-    createRoom(callback) {
+    async createRoom(callback) {
         this.isHost = true;
         const codeNum = Math.floor(100 + Math.random() * 900);
         this.roomId = `KURA-${codeNum}`;
         this.peersList = [{ id: 'host', name: this.localPlayerName, isHost: true }];
 
+        // Try local server room API first for ultra-reliable sync
+        try {
+            const resp = await fetch('/api/party/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ playerName: this.localPlayerName })
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data.success && data.roomId) {
+                    this.roomId = data.roomId;
+                    this.peersList = data.room.players || this.peersList;
+                    this.startServerPolling();
+                    if (callback) callback({ success: true, roomId: this.roomId, isHost: true });
+                    return;
+                }
+            }
+        } catch (e) {}
+
+        // Fallback to PeerJS WebRTC
         if (window.Peer) {
             try {
                 this.peer = new window.Peer(this.roomId, { debug: 0 });
@@ -68,10 +88,29 @@ class MultiplayerEngine {
         }
     }
 
-    joinRoom(targetRoomId, callback) {
+    async joinRoom(targetRoomId, callback) {
         this.isHost = false;
         this.roomId = targetRoomId.toUpperCase().trim();
 
+        // Try local server room API first
+        try {
+            const resp = await fetch('/api/party/join', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roomId: this.roomId, playerName: this.localPlayerName })
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data.success) {
+                    this.peersList = data.room.players || [];
+                    this.startServerPolling();
+                    if (callback) callback({ success: true, roomId: this.roomId, isHost: data.isHost });
+                    return;
+                }
+            }
+        } catch (e) {}
+
+        // Fallback to PeerJS WebRTC
         if (window.Peer) {
             try {
                 this.peer = new window.Peer({ debug: 0 });
@@ -103,8 +142,25 @@ class MultiplayerEngine {
                 if (callback) callback({ success: false, error: e.message });
             }
         } else {
-            if (callback) callback({ success: false, error: 'Network library unavailable in offline mode.' });
+            if (callback) callback({ success: false, error: 'Could not reach server room.' });
         }
+    }
+
+    startServerPolling() {
+        if (this.pollTimer) clearInterval(this.pollTimer);
+        this.pollTimer = setInterval(async () => {
+            if (!this.roomId) return;
+            try {
+                const resp = await fetch(`/api/party/room?roomId=${encodeURIComponent(this.roomId)}&player=${encodeURIComponent(this.localPlayerName)}`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data.success && data.room) {
+                        this.peersList = data.room.players || [];
+                        this.notifyPlayerListUpdate();
+                    }
+                }
+            } catch (e) {}
+        }, 2500);
     }
 
     handleNewConnection(conn) {

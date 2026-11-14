@@ -39,7 +39,7 @@ class NeonDashGame {
     bindEvents() {
         this.handleAction = (e) => {
             if (!this.running || !this.player || !this.player.alive) return;
-            if (e.code === 'Space' || e.type === 'pointerdown') {
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'ArrowDown' || e.code === 'KeyW' || e.code === 'KeyS' || e.type === 'pointerdown') {
                 if (e.preventDefault) e.preventDefault();
                 this.flipGravity();
             }

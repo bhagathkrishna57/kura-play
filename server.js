@@ -59,8 +59,17 @@ const defaultLeaderboard = {
         { username: 'BHAGATH_KRISHNA', score: 1850, date: '2026-10-31', verified: true, title: 'ARCADE ARCHITECT' },
         { username: 'BLADE_MASTER', score: 1240, date: '2026-10-31', verified: true },
         { username: 'LASER_CLAW', score: 890, date: '2026-10-30', verified: true }
+    ],
+    'pulse-deflector': [
+        { username: 'BHAGATH_KRISHNA', score: 1680, date: '2026-10-31', verified: true, title: 'ARCADE ARCHITECT' },
+        { username: 'SHIELD_WARDEN', score: 1120, date: '2026-10-31', verified: true },
+        { username: 'PHOTON_PULSE', score: 840, date: '2026-10-30', verified: true },
+        { username: 'ORBIT_ZERO', score: 620, date: '2026-10-30', verified: true }
     ]
 };
+
+// In-Memory Multiplayer Party Rooms
+const partyRooms = {};
 
 const users = loadJSON(USERS_FILE, {
     'BHAGATH_KRISHNA': {
@@ -235,13 +244,94 @@ const server = http.createServer(async (req, res) => {
         });
     }
 
-    // Get Leaderboard
+    // Get Leaderboard (with optional search query)
     if (pathname === '/api/leaderboard' && req.method === 'GET') {
         const gameId = url.searchParams.get('game');
+        const query = (url.searchParams.get('q') || url.searchParams.get('search') || '').trim().toUpperCase();
+
         if (gameId && leaderboard[gameId]) {
-            return sendJSON(res, 200, { gameId, scores: leaderboard[gameId] });
+            let scores = leaderboard[gameId];
+            if (query) {
+                scores = scores.filter(s => s.username.includes(query) || (s.title && s.title.includes(query)));
+            }
+            return sendJSON(res, 200, { gameId, scores });
         }
+
+        if (query) {
+            const filtered = {};
+            for (const [gid, list] of Object.entries(leaderboard)) {
+                filtered[gid] = list.filter(s => s.username.includes(query) || (s.title && s.title.includes(query)));
+            }
+            return sendJSON(res, 200, { leaderboard: filtered });
+        }
+
         return sendJSON(res, 200, { leaderboard });
+    }
+
+    // ==============================================================
+    // MULTIPLAYER PARTY ROOM APIS (ZERO-DEPENDENCY FALLBACK)
+    // ==============================================================
+
+    // Create Party Room
+    if (pathname === '/api/party/create' && req.method === 'POST') {
+        const { playerName } = await parseBody(req);
+        const hostName = (playerName || 'HOST_PILOT').trim().toUpperCase().slice(0, 16);
+        const codeNum = Math.floor(100 + Math.random() * 900);
+        const roomId = `KURA-${codeNum}`;
+
+        partyRooms[roomId] = {
+            roomId,
+            host: hostName,
+            createdAt: Date.now(),
+            players: [{ name: hostName, isHost: true, score: 0, lastSeen: Date.now() }],
+            selectedGame: 'aim-matrix',
+            status: 'LOBBY'
+        };
+
+        return sendJSON(res, 200, { success: true, roomId, isHost: true, room: partyRooms[roomId] });
+    }
+
+    // Join Party Room
+    if (pathname === '/api/party/join' && req.method === 'POST') {
+        const { roomId, playerName } = await parseBody(req);
+        const cleanRoom = (roomId || '').trim().toUpperCase();
+        const cleanPlayer = (playerName || 'GUEST_PILOT').trim().toUpperCase().slice(0, 16);
+
+        if (!cleanRoom || !partyRooms[cleanRoom]) {
+            return sendJSON(res, 404, { error: 'Room not found. Check the 3-digit room code.' });
+        }
+
+        const room = partyRooms[cleanRoom];
+        const existingIdx = room.players.findIndex(p => p.name === cleanPlayer);
+        if (existingIdx !== -1) {
+            room.players[existingIdx].lastSeen = Date.now();
+        } else {
+            room.players.push({ name: cleanPlayer, isHost: false, score: 0, lastSeen: Date.now() });
+        }
+
+        return sendJSON(res, 200, { success: true, roomId: cleanRoom, isHost: room.host === cleanPlayer, room });
+    }
+
+    // Get Party Room Status / Poll
+    if (pathname === '/api/party/room' && req.method === 'GET') {
+        const roomId = (url.searchParams.get('roomId') || '').trim().toUpperCase();
+        const playerName = (url.searchParams.get('player') || '').trim().toUpperCase();
+
+        if (!roomId || !partyRooms[roomId]) {
+            return sendJSON(res, 404, { error: 'Room not found.' });
+        }
+
+        const room = partyRooms[roomId];
+        if (playerName) {
+            const p = room.players.find(x => x.name === playerName);
+            if (p) p.lastSeen = Date.now();
+        }
+
+        // Clean inactive players (> 45s timeout)
+        const now = Date.now();
+        room.players = room.players.filter(p => now - p.lastSeen < 45000);
+
+        return sendJSON(res, 200, { success: true, room });
     }
 
     // Submit High Score (Requires username)

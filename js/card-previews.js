@@ -182,6 +182,52 @@ class CardPreviewEngine {
                 ctx.fill();
             }
         }
+
+        // 5. Pulse Deflector Mini Canvas
+        if (this.canvases['pulse-deflector']) {
+            const { ctx, canvas } = this.canvases['pulse-deflector'];
+            const w = canvas.width;
+            const h = canvas.height;
+            const cx = w * 0.5;
+            const cy = h * 0.5;
+            ctx.clearRect(0, 0, w, h);
+
+            // Radar rings
+            ctx.strokeStyle = 'rgba(0, 217, 245, 0.08)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 32, 0, Math.PI * 2);
+            ctx.arc(cx, cy, 54, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Central core
+            const pulse = Math.sin(now * 5) * 2;
+            ctx.fillStyle = '#00D9F5';
+            ctx.shadowColor = '#00D9F5';
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 10 + pulse, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Orbiting shield arc
+            const shieldAngle = now * 2.2;
+            ctx.strokeStyle = '#00F5A0';
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.shadowColor = '#00F5A0';
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 36, shieldAngle - 0.5, shieldAngle + 0.5);
+            ctx.stroke();
+
+            // Deflected projectile spark
+            const sparkX = cx + Math.cos(shieldAngle) * 36;
+            const sparkY = cy + Math.sin(shieldAngle) * 36;
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.arc(sparkX, sparkY, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 
     init3DParallax() {

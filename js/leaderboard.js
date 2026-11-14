@@ -15,14 +15,16 @@ class LeaderboardManager {
                 'aim-matrix': { highScore: 0, gamesPlayed: 0 },
                 'neon-dash': { highScore: 0, bestTime: 0, gamesPlayed: 0 },
                 'flash-reflex': { bestMs: 9999, wins: 0, gamesPlayed: 0 },
-                'cyber-slicer': { highScore: 0, gamesPlayed: 0 }
+                'cyber-slicer': { highScore: 0, gamesPlayed: 0 },
+                'pulse-deflector': { highScore: 0, gamesPlayed: 0 }
             };
         } catch (e) {
             return {
                 'aim-matrix': { highScore: 0, gamesPlayed: 0 },
                 'neon-dash': { highScore: 0, bestTime: 0, gamesPlayed: 0 },
                 'flash-reflex': { bestMs: 9999, wins: 0, gamesPlayed: 0 },
-                'cyber-slicer': { highScore: 0, gamesPlayed: 0 }
+                'cyber-slicer': { highScore: 0, gamesPlayed: 0 },
+                'pulse-deflector': { highScore: 0, gamesPlayed: 0 }
             };
         }
     }

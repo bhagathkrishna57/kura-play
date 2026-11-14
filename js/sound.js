@@ -334,6 +334,87 @@ class SoundEngine {
         this.playTone(1050, 'square', 0.25, 0.35);
         setTimeout(() => this.playTone(1400, 'square', 0.3, 0.35), 40);
     }
+
+    // ==============================================================
+    // SECTOR 05 // QUANTUM DEFLECTOR & COMBAT REFINEMENTS
+    // ==============================================================
+    playDeflect() {
+        if (this.muted) return;
+        this.init();
+        try {
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(600, now);
+            osc.frequency.exponentialRampToValueAtTime(1600, now + 0.08);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.12);
+            // Secondary high ping
+            setTimeout(() => this.playTone(2200, 'sine', 0.04, 0.15), 25);
+        } catch (e) {}
+    }
+
+    playEmpBlast() {
+        if (this.muted) return;
+        this.init();
+        try {
+            const now = this.ctx.currentTime;
+            // Sub-bass thump
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(140, now);
+            osc.frequency.exponentialRampToValueAtTime(32, now + 0.5);
+            gain.gain.setValueAtTime(0.4, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.5);
+
+            // High frequency energy sweep
+            setTimeout(() => {
+                if (this.muted) return;
+                const osc2 = this.ctx.createOscillator();
+                const gain2 = this.ctx.createGain();
+                osc2.type = 'sawtooth';
+                osc2.frequency.setValueAtTime(2400, this.ctx.currentTime);
+                osc2.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + 0.35);
+                gain2.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain2.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
+                osc2.connect(gain2);
+                gain2.connect(this.ctx.destination);
+                osc2.start(this.ctx.currentTime);
+                osc2.stop(this.ctx.currentTime + 0.35);
+            }, 50);
+        } catch (e) {}
+    }
+
+    playCombo(streak = 1) {
+        if (this.muted) return;
+        this.init();
+        const baseFreq = 440;
+        const notes = [0, 2, 4, 7, 9, 12, 14, 16];
+        const step = notes[Math.min(streak, notes.length - 1)];
+        const freq = baseFreq * Math.pow(2, step / 12);
+        this.playTone(freq, 'triangle', 0.09, 0.22);
+    }
+
+    playPowerup() {
+        if (this.muted) return;
+        this.init();
+        const notes = [587.33, 739.99, 880, 1174.66];
+        notes.forEach((freq, idx) => {
+            setTimeout(() => {
+                this.playTone(freq, 'sine', 0.08, 0.18);
+            }, idx * 45);
+        });
+    }
 }
 
 window.KuraSounds = new SoundEngine();

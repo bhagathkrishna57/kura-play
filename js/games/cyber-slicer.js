@@ -164,7 +164,11 @@ class CyberSlicerGame {
                     this.score += points;
 
                     if (window.KuraSounds) {
-                        window.KuraSounds.playTone(850 + this.comboCount * 70, 'sawtooth', 0.05, 0.22);
+                        if (this.comboCount >= 3) {
+                            window.KuraSounds.playCombo(this.comboCount);
+                        } else {
+                            window.KuraSounds.playTone(850 + this.comboCount * 70, 'sawtooth', 0.05, 0.22);
+                        }
                     }
 
                     this.createSlicePieces(c, p1, p2);

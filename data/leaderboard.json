@@ -94,5 +94,32 @@
       "date": "2026-10-30",
       "verified": true
     }
+  ],
+  "pulse-deflector": [
+    {
+      "username": "BHAGATH_KRISHNA",
+      "score": 1680,
+      "date": "2026-10-31",
+      "verified": true,
+      "title": "ARCADE ARCHITECT"
+    },
+    {
+      "username": "SHIELD_WARDEN",
+      "score": 1120,
+      "date": "2026-10-31",
+      "verified": true
+    },
+    {
+      "username": "PHOTON_PULSE",
+      "score": 840,
+      "date": "2026-10-30",
+      "verified": true
+    },
+    {
+      "username": "ORBIT_ZERO",
+      "score": 620,
+      "date": "2026-10-30",
+      "verified": true
+    }
   ]
 }

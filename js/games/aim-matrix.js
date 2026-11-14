@@ -136,6 +136,8 @@ class AimMatrixGame {
             if (window.KuraSounds) {
                 if (isBullseye) {
                     window.KuraSounds.playScore();
+                } else if (this.streak >= 3) {
+                    window.KuraSounds.playCombo(this.streak);
                 } else {
                     window.KuraSounds.playTone(900 + this.streak * 30, 'triangle', 0.06, 0.2);
                 }

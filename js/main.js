@@ -5,7 +5,7 @@ class ArcadeHub {
         this.currentGame = null;
         this.currentGameId = null;
         this.currentMode = 'solo';
-        this.availableGames = ['aim-matrix', 'neon-dash', 'flash-reflex', 'cyber-slicer'];
+        this.availableGames = ['aim-matrix', 'neon-dash', 'flash-reflex', 'cyber-slicer', 'pulse-deflector'];
 
         this.initDOM();
         this.initBackgroundCanvas();
@@ -231,10 +231,13 @@ class ArcadeHub {
             });
         });
 
-        document.getElementById('hud-hub-btn').addEventListener('click', () => {
-            if (window.KuraSounds) window.KuraSounds.playClick();
-            this.showHub();
-        });
+        const hudHubBtn = document.getElementById('hud-hub-btn') || document.getElementById('hud-back-btn');
+        if (hudHubBtn) {
+            hudHubBtn.addEventListener('click', () => {
+                if (window.KuraSounds) window.KuraSounds.playClick();
+                this.showHub();
+            });
+        }
 
         document.getElementById('hud-mode-toggle').addEventListener('click', (e) => {
             if (window.KuraSounds) window.KuraSounds.playClick();
@@ -255,12 +258,15 @@ class ArcadeHub {
         });
 
         const openPartyBtn = document.getElementById('open-party-btn');
-        if (openPartyBtn) {
-            openPartyBtn.addEventListener('click', () => {
-                if (window.KuraSounds) window.KuraSounds.playClick();
-                this.openPartyModal();
-            });
-        }
+        const hudPartyBtn = document.getElementById('hud-party-btn');
+        [openPartyBtn, hudPartyBtn].forEach(btn => {
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    if (window.KuraSounds) window.KuraSounds.playClick();
+                    this.openPartyModal();
+                });
+            }
+        });
 
         const closePartyBtn = document.getElementById('close-party-modal');
         if (closePartyBtn) {
@@ -482,6 +488,7 @@ class ArcadeHub {
         const statNeon = document.getElementById('stat-neon-dash');
         const statFlash = document.getElementById('stat-flash-reflex');
         const statSlicer = document.getElementById('stat-cyber-slicer');
+        const statPulse = document.getElementById('stat-pulse-deflector');
 
         if (statAim && stats['aim-matrix']) statAim.textContent = `SCORE: ${stats['aim-matrix'].highScore || 0}`;
         if (statNeon && stats['neon-dash']) statNeon.textContent = `BEST: ${stats['neon-dash'].highScore || 0}m`;
@@ -490,6 +497,7 @@ class ArcadeHub {
             statFlash.textContent = `BEST: ${ms && ms !== 9999 ? ms + 'ms' : '--'}`;
         }
         if (statSlicer && stats['cyber-slicer']) statSlicer.textContent = `SCORE: ${stats['cyber-slicer'].highScore || 0}`;
+        if (statPulse && stats['pulse-deflector']) statPulse.textContent = `SCORE: ${stats['pulse-deflector'].highScore || 0} PTS`;
     }
 
     openPartyModal() {
@@ -689,6 +697,31 @@ class ArcadeHub {
             });
         });
 
+        // Search Pilots in Leaderboard
+        const lbSearchInput = document.getElementById('lb-search-input');
+        if (lbSearchInput) {
+            let searchTimeout = null;
+            lbSearchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    this.renderLeaderboardSector(this.currentLbSector || 'aim-matrix', e.target.value.trim());
+                }, 200);
+            });
+        }
+
+        // Copy Room Link Button
+        const btnCopyLink = document.getElementById('btn-copy-room-link');
+        if (btnCopyLink) {
+            btnCopyLink.addEventListener('click', () => {
+                const code = (window.KuraMultiplayer && window.KuraMultiplayer.roomId) || 'KURA-ROOM';
+                const shareUrl = `${window.location.origin}${window.location.pathname}?room=${code}`;
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                    btnCopyLink.textContent = 'LINK COPIED!';
+                    setTimeout(() => { btnCopyLink.textContent = 'SHARE ROOM LINK'; }, 2000);
+                }).catch(() => {});
+            });
+        }
+
         // Listen for Auth changes
         if (window.KuraServer) {
             window.KuraServer.onAuthChange(() => this.updateAuthUI());
@@ -794,17 +827,20 @@ class ArcadeHub {
         await this.renderLeaderboardSector(this.currentLbSector || 'aim-matrix');
     }
 
-    async renderLeaderboardSector(gameId) {
+    async renderLeaderboardSector(gameId, searchQuery = '') {
         const tbody = document.getElementById('leaderboard-table-body');
         if (!tbody || !window.KuraServer) return;
 
         tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">FETCHING SERVER RANKINGS...</td></tr>`;
 
-        const scores = await window.KuraServer.fetchLeaderboard(gameId);
+        const searchInput = document.getElementById('lb-search-input');
+        const query = searchQuery !== '' ? searchQuery : (searchInput ? searchInput.value.trim() : '');
+
+        const scores = await window.KuraServer.fetchLeaderboard(gameId, query);
         const currentUser = window.KuraServer.currentUser;
 
         if (!scores || scores.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">NO RECORDED SCORES YET. BE THE FIRST!</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">${query ? 'NO MATCHING PILOTS FOUND FOR "' + query.toUpperCase() + '"' : 'NO RECORDED SCORES YET. BE THE FIRST!'}</td></tr>`;
             return;
         }
 

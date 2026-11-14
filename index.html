@@ -42,6 +42,9 @@
                 <button class="btn-nav btn-leaderboard-nav" id="open-leaderboard-btn" title="View Global Server Leaderboard [Press L]">
                     <span>🏆</span> <span class="nav-btn-text">GLOBAL LEADERBOARD</span> <span class="nav-shortcut">[L]</span>
                 </button>
+                <button class="btn-nav" id="open-party-btn" title="Create or Join Multiplayer Party Lobby">
+                    <span>👥</span> <span class="nav-btn-text">PARTY LOBBY</span>
+                </button>
                 <button class="btn-nav btn-pilot-auth" id="open-auth-btn">
                     <span class="led-status" id="pilot-nav-led" style="background: var(--neon-coral); box-shadow: 0 0 8px var(--neon-coral);"></span>
                     <span id="pilot-nav-label">PILOT LOGIN</span>
@@ -169,6 +172,31 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Slot 5: Pulse Deflector -->
+                <div class="game-console-card" data-game="pulse-deflector">
+                    <div class="card-slot-header">
+                        <span class="slot-code">[SECTOR 05] // QUANTUM DEFLECTOR</span>
+                        <span class="slot-status-led"></span>
+                    </div>
+                    <div class="card-mini-viewport">
+                        <canvas class="card-mini-canvas"></canvas>
+                        <div class="card-corner-tech tl"></div>
+                        <div class="card-corner-tech tr"></div>
+                        <div class="card-corner-tech bl"></div>
+                        <div class="card-corner-tech br"></div>
+                    </div>
+                    <div class="card-body">
+                        <div>
+                            <h3 class="card-game-title">Pulse Deflector</h3>
+                            <p class="card-tactical-desc">360° kinetic shield defense. Deflect incoming cyber-orbs and lasers to charge your OVERDRIVE EMP shockwave [SPACE].</p>
+                        </div>
+                        <div class="card-telemetry-row">
+                            <span class="card-high-stat" id="stat-pulse-deflector">BEST: 0 PTS</span>
+                            <div class="card-engage-btn">ENGAGE ➔</div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Global Leaderboard Showcase Banner on Main Hub -->
@@ -224,6 +252,7 @@
                 <button class="hud-btn" id="hud-mode-toggle" title="Switch 1-Player vs 2-Player on same keyboard">MODE: SOLO</button>
                 <button class="hud-btn retry-highlight" id="hud-retry-btn" title="Try Again / Restart this game immediately (R)">🔄 TRY AGAIN [R]</button>
                 <button class="hud-btn lb-highlight" id="hud-lb-btn" title="View Global Leaderboard (L)">🏆 LEADERBOARD [L]</button>
+                <button class="hud-btn" id="hud-party-btn" title="Multiplayer Party Lobby">👥 PARTY</button>
                 <button class="hud-btn skip-highlight" id="hud-skip-btn" title="Skip to next game (N)">⏭ SKIP (N)</button>
                 <button class="hud-btn" id="hud-back-btn" title="Exit to Games Menu">← BACK</button>
             </div>
@@ -359,6 +388,12 @@
                 <button class="lb-tab" data-game="neon-dash">⚡ NEON DASH</button>
                 <button class="lb-tab" data-game="flash-reflex">⚡ FLASH REFLEX</button>
                 <button class="lb-tab" data-game="cyber-slicer">⚔️ CYBER SLICER</button>
+                <button class="lb-tab" data-game="pulse-deflector">🛡️ PULSE DEFLECTOR</button>
+            </div>
+
+            <!-- Pilot Search Filter -->
+            <div class="lb-search-bar" style="margin-bottom: 14px;">
+                <input type="text" id="lb-search-input" class="text-input" placeholder="🔍 Search pilot callsign or architect rank..." style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(0, 217, 245, 0.25); font-size: 13px; padding: 10px 14px;">
             </div>
 
             <!-- Login Gate (Shown when user is NOT logged in) -->
@@ -403,7 +438,61 @@
         </div>
     </div>
 
+    <!-- Multiplayer Party Lobby Modal -->
+    <div class="modal-overlay" id="party-modal">
+        <div class="modal-box pilot-auth-box">
+            <button class="modal-close" id="close-party-modal">✕</button>
+            <div class="auth-modal-header">
+                <div class="auth-icon-badge">👥</div>
+                <div>
+                    <h2 class="modal-title">Multiplayer Party Lobby</h2>
+                    <p class="modal-subtitle">Compete live against friends in real-time arcade battles.</p>
+                </div>
+            </div>
+
+            <div class="input-group" style="margin-bottom: 14px;">
+                <label class="input-label">YOUR PILOT DISPLAY NAME</label>
+                <input type="text" id="player-name-input" class="text-input" placeholder="Your Pilot Name" maxlength="16">
+            </div>
+
+            <!-- Active Room Info -->
+            <div class="room-code-display">
+                <div>
+                    <div style="font-size: 11px; color: var(--text-muted); letter-spacing: 1.5px; font-weight: 700;">ACTIVE ROOM CODE</div>
+                    <div class="room-code-text" id="display-room-code">NO ROOM</div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn-copy-code" id="btn-create-room" title="Generate New Room / Copy Code">HOST ROOM</button>
+                    <button class="btn-copy-code" id="btn-copy-room-link" style="background: rgba(0, 245, 160, 0.15); border-color: var(--neon-green); color: var(--neon-green);" title="Copy Direct Invite Link">SHARE LINK</button>
+                </div>
+            </div>
+
+            <!-- Join Existing Room -->
+            <div style="display: flex; gap: 8px; margin-bottom: 20px;">
+                <input type="text" id="join-room-input" class="text-input" placeholder="Enter Room Code (e.g. KURA-782)" style="flex: 1; text-transform: uppercase;">
+                <button class="btn-primary" id="btn-join-room" style="white-space: nowrap; padding: 0 18px;">
+                    <span>JOIN ➔</span>
+                </button>
+            </div>
+
+            <!-- Connected Players in Lobby -->
+            <div style="margin-top: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <label class="input-label" style="margin: 0;">CONNECTED PILOTS IN LOBBY (<span id="player-count">0</span>)</label>
+                    <span style="font-size: 10px; color: var(--neon-cyan); letter-spacing: 1px;">REAL-TIME SYNC</span>
+                </div>
+                <div class="peers-list" id="peers-list-container">
+                    <div class="peer-chip">
+                        <span>No other pilots connected. Host a room to invite friends!</span>
+                        <span style="color: var(--text-dim); font-size: 11px;">STANDBY</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Core Architecture Scripts (Runs directly in browser via file:/// or http://) -->
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="js/sound.js?v=4.2"></script>
     <script src="js/site-loader.js?v=4.2"></script>
     <script src="js/server-client.js?v=4.2"></script>
@@ -413,6 +502,7 @@
     <script src="js/games/neon-dash.js?v=4.2"></script>
     <script src="js/games/flash-reflex.js?v=4.2"></script>
     <script src="js/games/cyber-slicer.js?v=4.2"></script>
+    <script src="js/games/pulse-deflector.js?v=4.2"></script>
     <script src="js/card-previews.js?v=4.2"></script>
     <script src="js/main.js?v=4.2"></script>
 </body>
