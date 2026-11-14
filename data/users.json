@@ -64,5 +64,11 @@
     "sector": "ALL SECTORS",
     "role": "PILOT",
     "createdAt": "2026-11-14"
+  },
+  "PILOT6542": {
+    "username": "PILOT6542",
+    "sector": "PRECISION",
+    "role": "PILOT",
+    "createdAt": "2026-11-14"
   }
 }
