@@ -9,7 +9,8 @@ const crypto = require('crypto');
 const { DatabaseSync } = require('node:sqlite');
 
 const PORT = process.env.PORT || 3000;
-const DATA_DIR = path.join(__dirname, 'data');
+const isVercel = !!process.env.VERCEL;
+const DATA_DIR = isVercel ? path.join('/tmp', 'kura_data') : path.join(__dirname, 'data');
 const DB_PATH = path.join(DATA_DIR, 'kura_arcade.db');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const LEADERBOARD_FILE = path.join(DATA_DIR, 'leaderboard.json');
@@ -17,6 +18,14 @@ const LEADERBOARD_FILE = path.join(DATA_DIR, 'leaderboard.json');
 // Ensure data directory exists
 if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
+// If on Vercel and db doesn't exist in /tmp, seed from committed database
+if (isVercel && !fs.existsSync(DB_PATH)) {
+    const seedDb = path.join(__dirname, 'data', 'kura_arcade.db');
+    if (fs.existsSync(seedDb)) {
+        try { fs.copyFileSync(seedDb, DB_PATH); } catch (e) {}
+    }
 }
 
 // Initialize SQLite Database
@@ -265,10 +274,12 @@ function parseBody(req) {
 
 function sendJSON(res, status, data, headers = {}) {
     res.writeHead(status, {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json; charset=utf-8',
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Auth-Token',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Auth-Token, X-Requested-With, Accept, Origin, Cache-Control',
+        'Access-Control-Allow-Private-Network': 'true',
+        'Access-Control-Allow-Credentials': 'true',
         ...headers
     });
     res.end(JSON.stringify(data));
@@ -290,12 +301,16 @@ const MIME_TYPES = {
 // HTTP SERVER & ROUTING
 // ==============================================================
 const server = http.createServer(async (req, res) => {
-    // CORS Preflight
+    // Robust CORS Preflight & Private Network Access (PNA)
     if (req.method === 'OPTIONS') {
+        const reqOrigin = req.headers.origin || '*';
         res.writeHead(204, {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Auth-Token'
+            'Access-Control-Allow-Origin': reqOrigin,
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, HEAD',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Auth-Token, X-Requested-With, Accept, Origin, Cache-Control',
+            'Access-Control-Allow-Credentials': 'true',
+            'Access-Control-Allow-Private-Network': 'true',
+            'Access-Control-Max-Age': '86400'
         });
         res.end();
         return;
@@ -660,7 +675,13 @@ const server = http.createServer(async (req, res) => {
 
     fs.stat(filePath, (err, stats) => {
         if (err || !stats.isFile()) {
-            res.writeHead(404, { 'Content-Type': 'text/plain' });
+            if (pathname.startsWith('/api/')) {
+                return sendJSON(res, 404, { error: `API route not found: ${pathname}` });
+            }
+            res.writeHead(404, {
+                'Content-Type': 'text/plain; charset=utf-8',
+                'Access-Control-Allow-Origin': '*'
+            });
             res.end('404 Not Found');
             return;
         }
@@ -670,17 +691,22 @@ const server = http.createServer(async (req, res) => {
 
         res.writeHead(200, {
             'Content-Type': contentType,
-            'Access-Control-Allow-Origin': '*'
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Private-Network': 'true'
         });
         fs.createReadStream(filePath).pipe(res);
     });
 });
 
-server.listen(PORT, () => {
-    console.log('===================================================');
-    console.log(`⚡ KURA ARCADE SERVER LIVE AT: http://localhost:${PORT}`);
-    console.log(`   Database: SQLite 3 (Permanent: data/kura_arcade.db)`);
-    console.log(`   Real Cryptographic Auth & Leaderboard Engine Active`);
-    console.log(`   Architect: Bhagath Krishna.M`);
-    console.log('===================================================');
-});
+if (require.main === module || (!process.env.VERCEL && process.env.NODE_ENV !== 'test')) {
+    server.listen(PORT, () => {
+        console.log('===================================================');
+        console.log(`⚡ KURA ARCADE SERVER LIVE AT: http://localhost:${PORT}`);
+        console.log(`   Database: SQLite 3 (${DB_PATH})`);
+        console.log(`   Real Cryptographic Auth & Leaderboard Engine Active`);
+        console.log(`   Architect: Bhagath Krishna.M`);
+        console.log('===================================================');
+    });
+}
+
+module.exports = server;

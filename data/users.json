@@ -40,5 +40,17 @@
     "sector": "NEON DASH",
     "role": "PILOT",
     "createdAt": "2026-11-14"
+  },
+  "AUTH_TEST_2957": {
+    "username": "AUTH_TEST_2957",
+    "sector": "AIM MATRIX",
+    "role": "PILOT",
+    "createdAt": "2026-11-14"
+  },
+  "AUTH_TEST_3377": {
+    "username": "AUTH_TEST_3377",
+    "sector": "AIM MATRIX",
+    "role": "PILOT",
+    "createdAt": "2026-11-14"
   }
 }

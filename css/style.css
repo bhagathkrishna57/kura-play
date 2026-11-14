@@ -965,6 +965,8 @@ header.arcade-nav {
     padding: 10px 14px;
     border-radius: var(--radius-hud);
     margin-bottom: 16px;
+    word-break: break-word;
+    line-height: 1.45;
 }
 
 .auth-server-status-pill {
@@ -2170,6 +2172,50 @@ body.hub-ready .game-console-card:nth-child(4) { animation-delay: 0.4s !importan
 /* COMPREHENSIVE RESPONSIVE DESIGN & MOBILE COMPATIBILITY     */
 /* Architected by Bhagath Krishna.M                          */
 /* ========================================================= */
+
+/* Responsive Canvas Scaling & Touch Optimization */
+canvas,
+#active-game-canvas,
+.card-preview-canvas {
+  max-width: 100% !important;
+  height: auto !important;
+  touch-action: none; /* Disables default pinch-zoom/scroll on mobile game canvases */
+}
+
+/* Responsive Modals and Dialogs */
+.modal, 
+[role="dialog"], 
+.auth-modal, 
+.leaderboard-modal, 
+.lobby-modal,
+.modal-box,
+.leaderboard-modal-box,
+.pilot-auth-box,
+.auth-gate-card {
+  width: 92% !important;
+  max-width: 480px !important;
+  margin: 0 auto !important;
+  box-sizing: border-box !important;
+  max-height: 85vh !important;
+  max-height: 85dvh !important;
+  overflow-y: auto !important;
+  padding: 1.25rem !important;
+}
+
+/* Fluid Grid & Game Card Stacking on Mobile/Tablet */
+@media (max-width: 1023px) {
+  main > div:nth-child(2), 
+  .game-grid, 
+  .sector-container,
+  .games-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1.5rem !important;
+    width: 100% !important;
+    padding: 0 1rem !important;
+    box-sizing: border-box !important;
+  }
+}
 
 /* Desktop & Ultra-Wide (1024px and above) */
 @media (min-width: 1024px) {

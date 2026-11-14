@@ -38,6 +38,13 @@ class MultiplayerEngine {
         });
     }
 
+    getServerUrl() {
+        if (window.KuraServer && window.KuraServer.serverUrl) {
+            return window.KuraServer.serverUrl;
+        }
+        return window.location.origin && window.location.origin.includes('http') ? window.location.origin : 'http://localhost:3000';
+    }
+
     async createRoom(callback) {
         this.isHost = true;
         const codeNum = Math.floor(100 + Math.random() * 900);
@@ -46,10 +53,11 @@ class MultiplayerEngine {
 
         // Try local server room API first for ultra-reliable sync
         try {
-            const resp = await fetch('/api/party/create', {
+            const resp = await fetch(`${this.getServerUrl()}/api/party/create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ playerName: this.localPlayerName })
+                body: JSON.stringify({ playerName: this.localPlayerName }),
+                mode: 'cors'
             });
             if (resp.ok) {
                 const data = await resp.json();
@@ -61,7 +69,9 @@ class MultiplayerEngine {
                     return;
                 }
             }
-        } catch (e) {}
+        } catch (e) {
+            console.warn('[KURA MULTIPLAYER] Server room creation fallback to PeerJS:', e.message);
+        }
 
         // Fallback to PeerJS WebRTC
         if (window.Peer) {
@@ -94,10 +104,11 @@ class MultiplayerEngine {
 
         // Try local server room API first
         try {
-            const resp = await fetch('/api/party/join', {
+            const resp = await fetch(`${this.getServerUrl()}/api/party/join`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ roomId: this.roomId, playerName: this.localPlayerName })
+                body: JSON.stringify({ roomId: this.roomId, playerName: this.localPlayerName }),
+                mode: 'cors'
             });
             if (resp.ok) {
                 const data = await resp.json();
@@ -108,7 +119,9 @@ class MultiplayerEngine {
                     return;
                 }
             }
-        } catch (e) {}
+        } catch (e) {
+            console.warn('[KURA MULTIPLAYER] Server room join fallback to PeerJS:', e.message);
+        }
 
         // Fallback to PeerJS WebRTC
         if (window.Peer) {
@@ -151,7 +164,9 @@ class MultiplayerEngine {
         this.pollTimer = setInterval(async () => {
             if (!this.roomId) return;
             try {
-                const resp = await fetch(`/api/party/room?roomId=${encodeURIComponent(this.roomId)}&player=${encodeURIComponent(this.localPlayerName)}`);
+                const resp = await fetch(`${this.getServerUrl()}/api/party/room?roomId=${encodeURIComponent(this.roomId)}&player=${encodeURIComponent(this.localPlayerName)}`, {
+                    mode: 'cors'
+                });
                 if (resp.ok) {
                     const data = await resp.json();
                     if (data.success && data.room) {

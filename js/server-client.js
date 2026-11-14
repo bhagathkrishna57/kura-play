@@ -4,13 +4,84 @@
 
 class KuraServerClient {
     constructor() {
-        this.serverUrl = window.location.origin.includes('http') ? window.location.origin : 'http://localhost:3000';
+        this.serverUrl = this.determineServerUrl();
         this.isServerOnline = false;
         this.token = localStorage.getItem('kura_auth_token') || null;
         this.currentUser = this.loadLocalSession();
         this.onAuthChangeCallbacks = [];
 
+        console.info(`[KURA SERVER CLIENT] Initialized. Target API URL: ${this.serverUrl}`);
         this.init();
+    }
+
+    // Determine target API URL supporting dev servers, Vite, CRA, Next.js, Live Server, and file://
+    determineServerUrl() {
+        // 1. Explicit window / global / env overrides
+        if (typeof window !== 'undefined') {
+            if (window.KURA_SERVER_URL) return window.KURA_SERVER_URL.replace(/\/+$/, '');
+            if (window.KURA_API_URL) return window.KURA_API_URL.replace(/\/+$/, '');
+            if (window.API_URL) return window.API_URL.replace(/\/+$/, '');
+            if (window.VITE_API_URL) return window.VITE_API_URL.replace(/\/+$/, '');
+            if (window.REACT_APP_API_URL) return window.REACT_APP_API_URL.replace(/\/+$/, '');
+            if (window.NEXT_PUBLIC_API_URL) return window.NEXT_PUBLIC_API_URL.replace(/\/+$/, '');
+            if (window.__ENV__?.VITE_API_URL) return window.__ENV__.VITE_API_URL.replace(/\/+$/, '');
+            if (window.__ENV__?.REACT_APP_API_URL) return window.__ENV__.REACT_APP_API_URL.replace(/\/+$/, '');
+            if (window.__ENV__?.NEXT_PUBLIC_API_URL) return window.__ENV__.NEXT_PUBLIC_API_URL.replace(/\/+$/, '');
+            if (window.__ENV__?.API_URL) return window.__ENV__.API_URL.replace(/\/+$/, '');
+        }
+
+        // 2. Process env check (for bundled setups: CRA, Next, Node)
+        try {
+            if (typeof process !== 'undefined' && process.env) {
+                const envUrl = process.env.VITE_API_URL || 
+                               process.env.REACT_APP_API_URL || 
+                               process.env.NEXT_PUBLIC_API_URL || 
+                               process.env.API_URL;
+                if (envUrl) return envUrl.replace(/\/+$/, '');
+            }
+        } catch (e) {}
+
+        // 3. Vite / Bundler env check (safely evaluated dynamically to avoid non-module SyntaxError)
+        try {
+            const getMetaEnv = new Function("try { return import.meta && import.meta.env; } catch (e) { return null; }");
+            const metaEnv = getMetaEnv();
+            if (metaEnv) {
+                const metaUrl = metaEnv.VITE_API_URL || 
+                                metaEnv.NEXT_PUBLIC_API_URL || 
+                                metaEnv.REACT_APP_API_URL ||
+                                metaEnv.API_URL;
+                if (metaUrl) return metaUrl.replace(/\/+$/, '');
+            }
+        } catch (e) {}
+
+        // 4. Browser URL inspection
+        if (typeof window !== 'undefined' && window.location) {
+            const loc = window.location;
+            const origin = loc.origin || `${loc.protocol}//${loc.host}`;
+            const hostname = loc.hostname || 'localhost';
+            const protocol = loc.protocol.startsWith('http') ? loc.protocol : 'http:';
+
+            // If running on port 3000, current origin is the backend
+            if (loc.port === '3000') {
+                return origin;
+            }
+
+            // If running on local dev server (port 5500, 5173, 8080, 8000, etc.),
+            // backend runs on port 3000 on the same hostname
+            if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0') {
+                return `${protocol}//${hostname}:3000`;
+            }
+
+            // If running via file:/// origin is "null" or "file:"
+            if (loc.protocol === 'file:' || origin === 'null') {
+                return 'http://localhost:3000';
+            }
+
+            // In production where frontend & API share origin (e.g. deployed on render, railway, fly, vps)
+            return origin;
+        }
+
+        return 'http://localhost:3000';
     }
 
     async init() {
@@ -54,37 +125,129 @@ class KuraServerClient {
         this.onAuthChangeCallbacks.forEach(cb => cb(this.currentUser));
     }
 
+    // Health check with automated multi-candidate fallback probing
     async checkServerHealth() {
-        try {
-            const res = await fetch(`${this.serverUrl}/api/health`, { method: 'GET', mode: 'cors' });
-            if (res.ok) {
-                this.isServerOnline = true;
-                return true;
+        const candidates = [
+            this.serverUrl,
+            'http://localhost:3000',
+            'http://127.0.0.1:3000'
+        ];
+        if (typeof window !== 'undefined' && window.location.origin && window.location.origin.startsWith('http')) {
+            candidates.push(window.location.origin);
+        }
+
+        // Deduplicate
+        const uniqueCandidates = [...new Set(candidates.map(u => u.replace(/\/+$/, '')))];
+
+        for (const cand of uniqueCandidates) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 1800);
+                const res = await fetch(`${cand}/api/health`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                if (res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    if (data.status === 'ONLINE') {
+                        this.serverUrl = cand;
+                        this.isServerOnline = true;
+                        console.info(`[KURA SERVER] ✓ Successfully connected to backend at: ${this.serverUrl}`);
+                        return true;
+                    }
+                }
+            } catch (err) {
+                // Try next candidate
             }
-        } catch (e) {}
+        }
+
         this.isServerOnline = false;
+        console.warn(`[KURA SERVER] ⚠ Health check could not reach backend across candidates:`, uniqueCandidates);
         return false;
+    }
+
+    // Centralized request wrapper with robust error inspection & full visibility
+    async request(endpoint, options = {}) {
+        const url = `${this.serverUrl}${endpoint}`;
+        const method = options.method || 'GET';
+
+        let res;
+        try {
+            res = await fetch(url, {
+                ...options,
+                headers: {
+                    'Accept': 'application/json',
+                    ...(options.headers || {})
+                },
+                mode: 'cors'
+            });
+        } catch (networkErr) {
+            const detail = networkErr.message || 'Network request failed';
+            console.error(`[KURA API NETWORK FAILURE] ${method} ${url}:`, {
+                targetUrl: url,
+                serverUrl: this.serverUrl,
+                error: networkErr.name,
+                message: networkErr.message
+            });
+
+            return {
+                ok: false,
+                status: 0,
+                error: `Cannot connect to arcade server at ${this.serverUrl} (${detail}). Ensure backend is running on port 3000.`
+            };
+        }
+
+        // Parse response content
+        const contentType = res.headers.get('content-type') || '';
+        let data = null;
+        let rawText = '';
+        try {
+            rawText = await res.text();
+            if (contentType.includes('application/json') || (rawText.trim().startsWith('{') && rawText.trim().endsWith('}'))) {
+                data = JSON.parse(rawText);
+            }
+        } catch (parseErr) {
+            console.warn(`[KURA API] Response from ${url} was not JSON (HTTP ${res.status}):`, rawText.slice(0, 150));
+        }
+
+        if (!res.ok) {
+            console.error(`[KURA API HTTP ERROR] ${method} ${url} returned status ${res.status} (${res.statusText}):`, data || rawText.slice(0, 300));
+
+            let errMsg = data && (data.error || data.message);
+            if (!errMsg) {
+                if (res.status === 404) {
+                    errMsg = `Endpoint not found (HTTP 404) at ${url}. Please verify backend server routes.`;
+                } else if (res.status === 500) {
+                    errMsg = `Arcade server internal error (HTTP 500). Please check server terminal logs.`;
+                } else if (res.status === 502 || res.status === 503) {
+                    errMsg = `Arcade server unavailable (HTTP ${res.status}). Service is temporarily unreachable.`;
+                } else {
+                    errMsg = `Server error (HTTP ${res.status}: ${res.statusText || 'Error'}).`;
+                }
+            }
+            return { ok: false, status: res.status, data, error: errMsg };
+        }
+
+        return { ok: true, status: res.status, data: data || {} };
     }
 
     async verifySession() {
         if (!this.token) return null;
-        try {
-            const res = await fetch(`${this.serverUrl}/api/me`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${this.token}`,
-                    'X-Auth-Token': this.token
-                },
-                mode: 'cors'
-            });
-            if (res.ok) {
-                const data = await res.json();
-                if (data.success && data.user) {
-                    this.saveLocalSession(data.user, this.token);
-                    return data.user;
-                }
+        const res = await this.request('/api/me', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${this.token}`,
+                'X-Auth-Token': this.token
             }
-        } catch (e) {}
+        });
+
+        if (res.ok && res.data.success && res.data.user) {
+            this.saveLocalSession(res.data.user, this.token);
+            return res.data.user;
+        }
 
         // If server rejected the token, clear it
         this.saveLocalSession(null);
@@ -101,22 +264,18 @@ class KuraServerClient {
             return { success: false, error: 'Password must be at least 3 characters.' };
         }
 
-        try {
-            const res = await fetch(`${this.serverUrl}/api/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: cleanUser, password, sector }),
-                mode: 'cors'
-            });
-            const data = await res.json();
-            if (res.ok && data.success) {
-                this.saveLocalSession(data.user, data.token);
-                return { success: true, user: data.user, token: data.token };
-            }
-            return { success: false, error: data.error || 'Registration failed.' };
-        } catch (e) {
-            return { success: false, error: 'Cannot connect to arcade server. Please ensure server is running.' };
+        const res = await this.request('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: cleanUser, password, sector })
+        });
+
+        if (res.ok && res.data.success) {
+            this.saveLocalSession(res.data.user, res.data.token);
+            return { success: true, user: res.data.user, token: res.data.token };
         }
+
+        return { success: false, error: res.error || 'Registration failed.' };
     }
 
     // Login Pilot
@@ -126,57 +285,46 @@ class KuraServerClient {
             return { success: false, error: 'Please enter your callsign and password.' };
         }
 
-        try {
-            const res = await fetch(`${this.serverUrl}/api/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: cleanUser, password }),
-                mode: 'cors'
-            });
-            const data = await res.json();
-            if (res.ok && data.success) {
-                this.saveLocalSession(data.user, data.token);
-                return { success: true, user: data.user, token: data.token };
-            }
-            return { success: false, error: data.error || 'Invalid callsign or password.' };
-        } catch (e) {
-            return { success: false, error: 'Cannot connect to arcade server. Please ensure server is running.' };
+        const res = await this.request('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: cleanUser, password })
+        });
+
+        if (res.ok && res.data.success) {
+            this.saveLocalSession(res.data.user, res.data.token);
+            return { success: true, user: res.data.user, token: res.data.token };
         }
+
+        return { success: false, error: res.error || 'Invalid callsign or password.' };
     }
 
     // Google Pilot Authentication (OAuth / Instant Login)
     async loginWithGoogle(profile) {
-        try {
-            const res = await fetch(`${this.serverUrl}/api/auth/google`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(profile || {}),
-                mode: 'cors'
-            });
-            const data = await res.json();
-            if (res.ok && data.success) {
-                this.saveLocalSession(data.user, data.token);
-                return { success: true, user: data.user, token: data.token };
-            }
-            return { success: false, error: data.error || 'Google authentication failed.' };
-        } catch (e) {
-            return { success: false, error: 'Cannot connect to arcade server.' };
+        const res = await this.request('/api/auth/google', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(profile || {})
+        });
+
+        if (res.ok && res.data.success) {
+            this.saveLocalSession(res.data.user, res.data.token);
+            return { success: true, user: res.data.user, token: res.data.token };
         }
+
+        return { success: false, error: res.error || 'Google authentication failed.' };
     }
 
     // Logout Pilot
     async logout() {
         if (this.token) {
-            try {
-                await fetch(`${this.serverUrl}/api/logout`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${this.token}`,
-                        'X-Auth-Token': this.token
-                    },
-                    mode: 'cors'
-                });
-            } catch (e) {}
+            await this.request('/api/logout', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.token}`,
+                    'X-Auth-Token': this.token
+                }
+            });
         }
         this.saveLocalSession(null);
         return { success: true };
@@ -189,38 +337,32 @@ class KuraServerClient {
         }
 
         const scoreVal = parseFloat(score);
-        try {
-            const headers = { 'Content-Type': 'application/json' };
-            if (this.token) {
-                headers['Authorization'] = `Bearer ${this.token}`;
-                headers['X-Auth-Token'] = this.token;
-            }
-
-            const res = await fetch(`${this.serverUrl}/api/score`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({
-                    username: this.currentUser.username,
-                    gameId,
-                    score: scoreVal
-                }),
-                mode: 'cors'
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                return {
-                    success: true,
-                    userRank: data.userRank,
-                    userBestScore: data.userBestScore,
-                    totalPilots: data.totalPilots
-                };
-            }
-            const errData = await res.json().catch(() => ({}));
-            return { success: false, error: errData.error || 'Failed to record score.' };
-        } catch (e) {
-            return { success: false, error: e.message };
+        const headers = { 'Content-Type': 'application/json' };
+        if (this.token) {
+            headers['Authorization'] = `Bearer ${this.token}`;
+            headers['X-Auth-Token'] = this.token;
         }
+
+        const res = await this.request('/api/score', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+                username: this.currentUser.username,
+                gameId,
+                score: scoreVal
+            })
+        });
+
+        if (res.ok && res.data.success) {
+            return {
+                success: true,
+                userRank: res.data.userRank,
+                userBestScore: res.data.userBestScore,
+                totalPilots: res.data.totalPilots
+            };
+        }
+
+        return { success: false, error: res.error || 'Failed to record score.' };
     }
 
     // Fetch Leaderboard and User Position
@@ -229,23 +371,19 @@ class KuraServerClient {
         const qParam = searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : '';
         const uParam = username ? `&username=${encodeURIComponent(username)}` : '';
 
-        try {
-            const res = await fetch(`${this.serverUrl}/api/leaderboard?game=${encodeURIComponent(gameId)}${qParam}${uParam}`, {
-                method: 'GET',
-                mode: 'cors'
-            });
+        const res = await this.request(`/api/leaderboard?game=${encodeURIComponent(gameId)}${qParam}${uParam}`, {
+            method: 'GET'
+        });
 
-            if (res.ok) {
-                const data = await res.json();
-                return {
-                    gameId: data.gameId,
-                    scores: data.scores || [],
-                    userRank: data.userRank,
-                    userBestScore: data.userBestScore,
-                    totalPilots: data.totalPilots
-                };
-            }
-        } catch (e) {}
+        if (res.ok && res.data.scores) {
+            return {
+                gameId: res.data.gameId || gameId,
+                scores: res.data.scores || [],
+                userRank: res.data.userRank,
+                userBestScore: res.data.userBestScore,
+                totalPilots: res.data.totalPilots
+            };
+        }
 
         return {
             gameId,
