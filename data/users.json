@@ -38,7 +38,7 @@
     "email": "",
     "total_games": 0,
     "party_wins": 0,
-    "unlocked_medals": "[]",
+    "unlocked_medals": "[\"top_10_legend\"]",
     "createdAt": "2026-11-14"
   },
   "TEST_PILOT": {
@@ -190,6 +190,20 @@
     "avatar": "https://lh3.googleusercontent.com/a/test-avatar-photo",
     "bio": "",
     "email": "test.pilot@gmail.com",
+    "total_games": 0,
+    "party_wins": 0,
+    "unlocked_medals": "[]",
+    "createdAt": "2026-11-14"
+  },
+  "BHAGATHKRISHNA": {
+    "username": "BHAGATHKRISHNA",
+    "sector": "AIM MATRIX",
+    "primary_sector": "AIM MATRIX",
+    "role": "PILOT",
+    "avatar_id": 1,
+    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocICu4QHKorLXLCV3Yi-zdLnkkmutAF4xI27EDdKtuzOAOUbqXWT=s96-c",
+    "bio": "",
+    "email": "bhagathkrishna57@gmail.com",
     "total_games": 0,
     "party_wins": 0,
     "unlocked_medals": "[]",

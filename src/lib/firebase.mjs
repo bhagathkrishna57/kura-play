@@ -8,7 +8,11 @@ import {
   GoogleAuthProvider, 
   signInWithPopup, 
   signOut, 
-  onAuthStateChanged 
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPhoneNumber,
+  RecaptchaVerifier
 } from "firebase/auth";
 
 const firebaseConfig = {
@@ -33,5 +37,18 @@ if (typeof window !== 'undefined') {
   } catch (e) {}
 }
 
-export { app, auth, googleProvider, analytics, firebaseConfig, signInWithPopup, signOut, onAuthStateChanged };
+export { 
+  app, 
+  auth, 
+  googleProvider, 
+  analytics, 
+  firebaseConfig, 
+  signInWithPopup, 
+  signOut, 
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPhoneNumber,
+  RecaptchaVerifier
+};
 export default app;

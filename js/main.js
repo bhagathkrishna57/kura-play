@@ -749,6 +749,223 @@ class ArcadeHub {
         this.gateError = document.getElementById('gate-error-banner');
         this.navLogoutBtn = document.getElementById('nav-logout-btn');
 
+        // Multi-Protocol Switcher (Google, Email, Phone, Callsign)
+        const methodBtns = document.querySelectorAll('#gate-method-tabs .gate-method-btn');
+        const methodPanels = {
+            google: document.getElementById('method-panel-google'),
+            email: document.getElementById('method-panel-email'),
+            phone: document.getElementById('method-panel-phone'),
+            callsign: document.getElementById('method-panel-callsign')
+        };
+
+        methodBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const method = btn.getAttribute('data-method');
+                methodBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                Object.keys(methodPanels).forEach(key => {
+                    if (methodPanels[key]) {
+                        if (key === method) methodPanels[key].classList.remove('hidden');
+                        else methodPanels[key].classList.add('hidden');
+                    }
+                });
+                if (this.gateError) this.gateError.classList.add('hidden');
+                if (window.KuraSounds) window.KuraSounds.playClick();
+            });
+        });
+
+        // Email Sub-Tabs: Login vs Register
+        const emailTabLogin = document.getElementById('gate-email-tab-login');
+        const emailTabReg = document.getElementById('gate-email-tab-register');
+        const emailCallsignGrp = document.getElementById('gate-email-callsign-grp');
+        const emailSubmitBtn = document.getElementById('gate-email-submit');
+        let isEmailReg = false;
+
+        if (emailTabLogin && emailTabReg) {
+            emailTabLogin.addEventListener('click', () => {
+                isEmailReg = false;
+                emailTabLogin.classList.add('active');
+                emailTabReg.classList.remove('active');
+                if (emailCallsignGrp) emailCallsignGrp.classList.add('hidden');
+                if (emailSubmitBtn) emailSubmitBtn.innerHTML = '<span>AUTHENTICATE WITH EMAIL ➔</span>';
+                if (window.KuraSounds) window.KuraSounds.playClick();
+            });
+
+            emailTabReg.addEventListener('click', () => {
+                isEmailReg = true;
+                emailTabReg.classList.add('active');
+                emailTabLogin.classList.remove('active');
+                if (emailCallsignGrp) emailCallsignGrp.classList.remove('hidden');
+                if (emailSubmitBtn) emailSubmitBtn.innerHTML = '<span>CREATE FIREBASE ACCOUNT ➔</span>';
+                if (window.KuraSounds) window.KuraSounds.playClick();
+            });
+        }
+
+        // Email Form Submit Handler
+        const gateFormEmail = document.getElementById('gate-form-email');
+        if (gateFormEmail) {
+            gateFormEmail.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('gate-email-val').value.trim();
+                const pass = document.getElementById('gate-email-pass').value;
+                const callsignInput = document.getElementById('gate-email-callsign');
+                const callsign = callsignInput ? callsignInput.value.trim() : '';
+
+                if (!email || !pass) return;
+
+                if (emailSubmitBtn) {
+                    emailSubmitBtn.disabled = true;
+                    emailSubmitBtn.innerHTML = '<span>AUTHENTICATING VIA FIREBASE...</span>';
+                }
+
+                try {
+                    let authRes;
+                    if (isEmailReg) {
+                        authRes = await window.KuraFirebase.signUpWithEmail(email, pass, callsign);
+                    } else {
+                        authRes = await window.KuraFirebase.signInWithEmail(email, pass);
+                    }
+
+                    if (!authRes.success) {
+                        if (this.gateError) {
+                            this.gateError.textContent = authRes.message || 'Firebase email login failed.';
+                            this.gateError.classList.remove('hidden');
+                        }
+                        return;
+                    }
+
+                    const fbUser = authRes.user;
+                    const res = await window.KuraServer.loginWithFirebase({
+                        name: callsign || fbUser.displayName || email.split('@')[0],
+                        email: fbUser.email,
+                        picture: fbUser.photoURL || '',
+                        uid: fbUser.uid,
+                        provider: 'email'
+                    });
+
+                    if (res.success) {
+                        if (window.KuraSounds) window.KuraSounds.synthAccessGrantedSlam();
+                        this.hideAuthGate();
+                        this.updateAuthUI();
+                    } else {
+                        if (this.gateError) {
+                            this.gateError.textContent = res.error || 'Server session creation failed.';
+                            this.gateError.classList.remove('hidden');
+                        }
+                    }
+                } catch (err) {
+                    if (this.gateError) {
+                        this.gateError.textContent = err.message || 'Error occurred.';
+                        this.gateError.classList.remove('hidden');
+                    }
+                } finally {
+                    if (emailSubmitBtn) {
+                        emailSubmitBtn.disabled = false;
+                        emailSubmitBtn.innerHTML = isEmailReg ? '<span>CREATE FIREBASE ACCOUNT ➔</span>' : '<span>AUTHENTICATE WITH EMAIL ➔</span>';
+                    }
+                }
+            });
+        }
+
+        // Phone SMS OTP Transmission & Verification Handlers
+        const phoneSendBtn = document.getElementById('gate-phone-send-btn');
+        const phoneVerifyBtn = document.getElementById('gate-phone-verify-btn');
+        const phoneChangeBtn = document.getElementById('gate-phone-change-btn');
+        const stepSend = document.getElementById('gate-phone-step-send');
+        const stepVerify = document.getElementById('gate-phone-step-verify');
+
+        if (phoneSendBtn) {
+            phoneSendBtn.addEventListener('click', async () => {
+                const phoneInput = document.getElementById('gate-phone-number');
+                const phoneVal = phoneInput ? phoneInput.value.trim() : '';
+
+                if (!phoneVal) {
+                    if (this.gateError) {
+                        this.gateError.textContent = 'Please enter a valid phone number with country code (e.g. +1... or +91...).';
+                        this.gateError.classList.remove('hidden');
+                    }
+                    return;
+                }
+
+                phoneSendBtn.disabled = true;
+                phoneSendBtn.innerHTML = '<span>TRANSMITTING SMS OTP...</span>';
+
+                const res = await window.KuraFirebase.sendPhoneOtp(phoneVal, 'recaptcha-phone-container');
+                phoneSendBtn.disabled = false;
+                phoneSendBtn.innerHTML = '<span>TRANSMIT SMS VERIFICATION CODE ➔</span>';
+
+                if (res.success) {
+                    if (stepSend) stepSend.classList.add('hidden');
+                    if (stepVerify) stepVerify.classList.remove('hidden');
+                    if (this.gateError) this.gateError.classList.add('hidden');
+                } else {
+                    if (this.gateError) {
+                        this.gateError.textContent = res.message || 'Failed to send SMS verification code.';
+                        this.gateError.classList.remove('hidden');
+                    }
+                }
+            });
+        }
+
+        if (phoneChangeBtn) {
+            phoneChangeBtn.addEventListener('click', () => {
+                if (stepVerify) stepVerify.classList.add('hidden');
+                if (stepSend) stepSend.classList.remove('hidden');
+                if (this.gateError) this.gateError.classList.add('hidden');
+            });
+        }
+
+        if (phoneVerifyBtn) {
+            phoneVerifyBtn.addEventListener('click', async () => {
+                const otpInput = document.getElementById('gate-phone-otp');
+                const otpVal = otpInput ? otpInput.value.trim() : '';
+                const callsignInput = document.getElementById('gate-phone-callsign');
+                const callsignVal = callsignInput ? callsignInput.value.trim() : '';
+
+                if (!otpVal || otpVal.length < 6) {
+                    if (this.gateError) {
+                        this.gateError.textContent = 'Please enter the 6-digit verification code sent via SMS.';
+                        this.gateError.classList.remove('hidden');
+                    }
+                    return;
+                }
+
+                phoneVerifyBtn.disabled = true;
+                phoneVerifyBtn.innerHTML = '<span>VERIFYING CODE...</span>';
+
+                const res = await window.KuraFirebase.verifyPhoneOtp(otpVal, callsignVal);
+                phoneVerifyBtn.disabled = false;
+                phoneVerifyBtn.innerHTML = '<span>CONFIRM OTP & ENTER ARCADE ➔</span>';
+
+                if (res.success) {
+                    const fbUser = res.user;
+                    const serverRes = await window.KuraServer.loginWithFirebase({
+                        name: callsignVal || fbUser.displayName || `PILOT_${fbUser.phoneNumber.slice(-4)}`,
+                        phoneNumber: fbUser.phoneNumber,
+                        uid: fbUser.uid,
+                        provider: 'phone'
+                    });
+
+                    if (serverRes.success) {
+                        if (window.KuraSounds) window.KuraSounds.synthAccessGrantedSlam();
+                        this.hideAuthGate();
+                        this.updateAuthUI();
+                    } else {
+                        if (this.gateError) {
+                            this.gateError.textContent = serverRes.error || 'Server login failed.';
+                            this.gateError.classList.remove('hidden');
+                        }
+                    }
+                } else {
+                    if (this.gateError) {
+                        this.gateError.textContent = res.message || 'OTP verification failed.';
+                        this.gateError.classList.remove('hidden');
+                    }
+                }
+            });
+        }
+
         if (this.gateTabLogin && this.gateTabReg) {
             this.gateTabLogin.addEventListener('click', () => {
                 this.gateTabLogin.classList.add('active');

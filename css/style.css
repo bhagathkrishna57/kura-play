@@ -2880,6 +2880,92 @@ canvas,
     margin-bottom: 18px;
 }
 
+/* Multi-Protocol Auth Switcher (Google, Email, Phone, Callsign) */
+.gate-method-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    background: rgba(14, 20, 32, 0.8);
+    border: 1px solid var(--border-glass);
+    padding: 4px;
+    border-radius: 10px;
+    margin-bottom: 16px;
+}
+
+.gate-method-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 8px 4px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    text-align: center;
+}
+
+.gate-method-btn:hover {
+    color: #FFFFFF;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.gate-method-btn.active {
+    background: var(--neon-cyan);
+    color: #04060A;
+    box-shadow: 0 0 12px rgba(0, 217, 245, 0.45);
+}
+
+.auth-method-panel {
+    display: flex;
+    flex-direction: column;
+}
+
+.auth-method-panel.hidden {
+    display: none !important;
+}
+
+/* In-Game Floating HUD Profile Option */
+.hud-profile-pill {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    background: rgba(0, 243, 255, 0.12) !important;
+    border: 1px solid rgba(0, 243, 255, 0.45) !important;
+    color: #FFFFFF !important;
+    cursor: pointer !important;
+    padding: 4px 10px !important;
+    border-radius: 20px !important;
+    transition: all 0.2s ease !important;
+}
+
+.hud-profile-pill:hover {
+    background: rgba(0, 243, 255, 0.25) !important;
+    border-color: var(--neon-cyan) !important;
+    box-shadow: 0 0 12px rgba(0, 243, 255, 0.5) !important;
+}
+
+.hud-profile-badge-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.hud-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
 .gate-tab-btn {
     flex: 1;
     background: transparent;

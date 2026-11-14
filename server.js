@@ -80,6 +80,9 @@ try { db.exec(`ALTER TABLE users ADD COLUMN primary_sector TEXT DEFAULT 'AIM MAT
 try { db.exec(`ALTER TABLE users ADD COLUMN total_games INTEGER DEFAULT 0;`); } catch(e) {}
 try { db.exec(`ALTER TABLE users ADD COLUMN party_wins INTEGER DEFAULT 0;`); } catch(e) {}
 try { db.exec(`ALTER TABLE users ADD COLUMN unlocked_medals TEXT DEFAULT '[]';`); } catch(e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN phone TEXT DEFAULT '';`); } catch(e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN firebase_uid TEXT DEFAULT '';`); } catch(e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN auth_provider TEXT DEFAULT 'local';`); } catch(e) {}
 
 // ==============================================================
 // CRYPTOGRAPHIC UTILITIES
@@ -749,27 +752,46 @@ const server = http.createServer(async (req, res) => {
     }
 
     // -------------------------------------------------------------
-    // API: GOOGLE AUTHENTICATION (OAUTH / ONE-CLICK PILOT LOGIN)
+    // API: FIREBASE AUTHENTICATION (GOOGLE, EMAIL/PASS, PHONE OTP)
     // -------------------------------------------------------------
-    if (pathname === '/api/auth/google' && req.method === 'POST') {
-        const { name, email, picture, uid } = await parseBody(req);
-        if (!name && !email) {
-            return sendJSON(res, 400, { error: 'Missing name or email from Google auth payload.' });
+    if ((pathname === '/api/auth/firebase' || pathname === '/api/auth/google') && req.method === 'POST') {
+        const { name, email, phoneNumber, phone, picture, uid, provider } = await parseBody(req);
+        const contactEmail = (email || '').trim().toLowerCase();
+        const contactPhone = (phoneNumber || phone || '').trim();
+        const authProvider = provider || (contactPhone ? 'phone' : (contactEmail && contactEmail.endsWith('@gmail.com') ? 'google' : 'email'));
+
+        if (!name && !contactEmail && !contactPhone) {
+            return sendJSON(res, 400, { error: 'Missing identification credentials in auth payload.' });
         }
 
-        const rawName = (name || email.split('@')[0]).trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+        let baseName = name;
+        if (!baseName || !baseName.trim()) {
+            if (contactEmail) baseName = contactEmail.split('@')[0];
+            else if (contactPhone) baseName = `PILOT_${contactPhone.replace(/[^0-9]/g, '').slice(-4)}`;
+            else baseName = `PILOT_${Math.floor(1000 + Math.random() * 9000)}`;
+        }
+
+        const rawName = String(baseName).trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
         const cleanUser = (rawName.length >= 3 ? rawName.slice(0, 16) : `PILOT_${Math.floor(1000 + Math.random() * 9000)}`);
 
+        // Check if user exists by username, firebase_uid, or email
         let user = db.prepare('SELECT * FROM users WHERE username = ?').get(cleanUser);
+        if (!user && uid) {
+            user = db.prepare('SELECT * FROM users WHERE firebase_uid = ? AND firebase_uid != ""').get(uid);
+        }
+        if (!user && contactEmail) {
+            user = db.prepare('SELECT * FROM users WHERE email = ? AND email != ""').get(contactEmail);
+        }
+
         if (!user) {
             const salt = generateSalt();
-            const hash = hashPassword(`google_${Date.now()}_${Math.random()}`, salt);
+            const hash = hashPassword(`firebase_${Date.now()}_${Math.random()}`, salt);
             const now = new Date().toISOString().split('T')[0];
             const insert = db.prepare(`
-                INSERT INTO users (username, password_hash, salt, sector, role, created_at, avatar, email)
-                VALUES (?, ?, ?, 'ALL SECTORS', 'PILOT', ?, ?, ?)
+                INSERT INTO users (username, password_hash, salt, sector, role, created_at, avatar, email, phone, firebase_uid, auth_provider)
+                VALUES (?, ?, ?, 'ALL SECTORS', 'PILOT', ?, ?, ?, ?, ?, ?)
             `);
-            const result = insert.run(cleanUser, hash, salt, now, picture || '', email || '');
+            const result = insert.run(cleanUser, hash, salt, now, picture || '', contactEmail, contactPhone, uid || '', authProvider);
             user = { 
                 id: Number(result.lastInsertRowid), 
                 username: cleanUser, 
@@ -778,22 +800,25 @@ const server = http.createServer(async (req, res) => {
                 avatar: picture || '',
                 avatar_id: 1,
                 bio: '',
-                email: email || ''
+                email: contactEmail,
+                phone: contactPhone,
+                firebase_uid: uid || '',
+                auth_provider: authProvider
             };
             exportJSONSnapshots();
         } else {
-            // Update picture or email if missing on existing pilot profile
+            // Update picture, email, phone, or firebase_uid if missing
             if (picture && (!user.avatar || user.avatar === '')) {
-                try {
-                    db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(picture, user.id);
-                    user.avatar = picture;
-                } catch(e) {}
+                try { db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(picture, user.id); user.avatar = picture; } catch(e) {}
             }
-            if (email && (!user.email || user.email === '')) {
-                try {
-                    db.prepare('UPDATE users SET email = ? WHERE id = ?').run(email, user.id);
-                    user.email = email;
-                } catch(e) {}
+            if (contactEmail && (!user.email || user.email === '')) {
+                try { db.prepare('UPDATE users SET email = ? WHERE id = ?').run(contactEmail, user.id); user.email = contactEmail; } catch(e) {}
+            }
+            if (contactPhone && (!user.phone || user.phone === '')) {
+                try { db.prepare('UPDATE users SET phone = ? WHERE id = ?').run(contactPhone, user.id); user.phone = contactPhone; } catch(e) {}
+            }
+            if (uid && (!user.firebase_uid || user.firebase_uid === '')) {
+                try { db.prepare('UPDATE users SET firebase_uid = ? WHERE id = ?').run(uid, user.id); user.firebase_uid = uid; } catch(e) {}
             }
         }
 
@@ -801,22 +826,23 @@ const server = http.createServer(async (req, res) => {
         db.prepare(`
             INSERT INTO sessions (token, user_id, username, created_at, last_active)
             VALUES (?, ?, ?, ?, ?)
-        `).run(token, user.id, cleanUser, Date.now(), Date.now());
+        `).run(token, user.id, user.username, Date.now(), Date.now());
 
         return sendJSON(res, 200, {
             success: true,
             user: { 
                 id: user.id,
-                username: cleanUser, 
+                username: user.username, 
                 sector: user.primary_sector || user.sector || 'ALL SECTORS', 
                 role: user.role || 'PILOT', 
-                provider: 'google', 
-                email: user.email || email || '', 
+                provider: authProvider, 
+                email: user.email || contactEmail || '', 
+                phone: user.phone || contactPhone || '',
                 picture: user.avatar || picture || '',
                 avatar: user.avatar || picture || '',
                 avatar_id: user.avatar_id || 1,
                 bio: user.bio || '',
-                uid: uid || ''
+                uid: uid || user.firebase_uid || ''
             },
             token
         }, { 'Set-Cookie': `kura_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000` });

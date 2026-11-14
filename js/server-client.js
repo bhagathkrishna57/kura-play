@@ -299,9 +299,9 @@ class KuraServerClient {
         return { success: false, error: res.error || 'Invalid callsign or password.' };
     }
 
-    // Google Pilot Authentication (OAuth / Instant Login)
-    async loginWithGoogle(profile) {
-        const res = await this.request('/api/auth/google', {
+    // Unified Firebase Pilot Authentication (Google, Email/Pass, Phone OTP)
+    async loginWithFirebase(profile) {
+        const res = await this.request('/api/auth/firebase', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(profile || {})
@@ -312,7 +312,12 @@ class KuraServerClient {
             return { success: true, user: res.data.user, token: res.data.token };
         }
 
-        return { success: false, error: res.error || 'Google authentication failed.' };
+        return { success: false, error: res.error || 'Firebase authentication failed.' };
+    }
+
+    // Google Pilot Authentication (OAuth / Instant Login)
+    async loginWithGoogle(profile) {
+        return this.loginWithFirebase({ ...profile, provider: 'google' });
     }
 
     // Logout Pilot
