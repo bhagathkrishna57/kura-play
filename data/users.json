@@ -52,5 +52,17 @@
     "sector": "AIM MATRIX",
     "role": "PILOT",
     "createdAt": "2026-11-14"
+  },
+  "VIPER_1194": {
+    "username": "VIPER_1194",
+    "sector": "SECTOR 01 // AIM MATRIX",
+    "role": "PILOT",
+    "createdAt": "2026-11-14"
+  },
+  "CYBER_GUEST": {
+    "username": "CYBER_GUEST",
+    "sector": "ALL SECTORS",
+    "role": "PILOT",
+    "createdAt": "2026-11-14"
   }
 }
