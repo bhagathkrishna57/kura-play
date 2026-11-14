@@ -1,5 +1,19 @@
 // Main Application Orchestrator for KURA Cyber-Arcade
 
+const CYBER_PRESETS = {
+    1: { icon: '⚡', name: 'Neon Spark' },
+    2: { icon: '🤖', name: 'Cyber Android' },
+    3: { icon: '🎯', name: 'Aim Master' },
+    4: { icon: '🛡️', name: 'Aegis Sentinel' },
+    5: { icon: '⚔️', name: 'Cyber Slicer' },
+    6: { icon: '🌌', name: 'Void Walker' }
+};
+
+function getPresetAvatarIcon(id) {
+    const key = parseInt(id, 10);
+    return (CYBER_PRESETS[key] && CYBER_PRESETS[key].icon) || '⚡';
+}
+
 class ArcadeHub {
     constructor() {
         this.currentGame = null;
@@ -23,7 +37,11 @@ class ArcadeHub {
         this.partyModal = document.getElementById('party-modal');
         this.leaderboardModal = document.getElementById('leaderboard-modal');
         this.pilotModal = document.getElementById('pilot-modal');
+        this.profileModal = document.getElementById('profile-modal');
         this.currentLbSector = 'aim-matrix';
+        this.isComparingRecords = false;
+        this.selectedAvatarId = 1;
+        this.customAvatarDataUrl = '';
 
         this.playerNameInput = document.getElementById('player-name-input');
         if (this.playerNameInput && window.KuraMultiplayer) {
@@ -38,6 +56,7 @@ class ArcadeHub {
         this.initMobileNav();
         this.initMandatoryGate();
         this.initPilotAuth();
+        this.initPilotProfile();
     }
 
     resizeActiveCanvas() {
@@ -251,7 +270,7 @@ class ArcadeHub {
         });
 
         window.addEventListener('keydown', (e) => {
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
 
             // Strict Gate Check: Block all gameplay shortcuts when logged out or gate is active
             const user = window.KuraServer ? window.KuraServer.currentUser : null;
@@ -260,7 +279,15 @@ class ArcadeHub {
                 if (e.key === 'Escape') {
                     if (this.leaderboardModal) this.leaderboardModal.classList.remove('active');
                     if (this.partyModal) this.partyModal.classList.remove('active');
+                    if (this.profileModal) this.profileModal.classList.remove('active');
                 }
+                return;
+            }
+
+            // P to open Pilot Profile anytime
+            if (e.key === 'p' || e.key === 'P') {
+                e.preventDefault();
+                this.toggleProfileModal();
                 return;
             }
 
@@ -427,6 +454,10 @@ class ArcadeHub {
     }
 
     goBack() {
+        if (this.profileModal && this.profileModal.classList.contains('active')) {
+            this.profileModal.classList.remove('active');
+            return;
+        }
         if (this.pilotModal && this.pilotModal.classList.contains('active')) {
             this.pilotModal.classList.remove('active');
             return;
@@ -685,10 +716,20 @@ class ArcadeHub {
 
         container.innerHTML = players.map(p => `
             <div class="peer-chip">
-                <span>${p.name} ${p.isHost ? '(Host)' : ''}</span>
+                <span class="clickable-callsign" data-callsign="${p.name}" title="Click to view pilot dossier">
+                    👤 <strong>${p.name}</strong> ${p.isHost ? '(Host)' : ''}
+                </span>
                 <span style="color: var(--neon-green); font-size: 11px;">CONNECTED</span>
             </div>
         `).join('');
+
+        container.querySelectorAll('.clickable-callsign').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const name = el.getAttribute('data-callsign');
+                if (name) this.openPilotProfileModal(name);
+            });
+        });
     }
 
     // ==============================================================
@@ -844,6 +885,7 @@ class ArcadeHub {
         if (this.leaderboardModal) this.leaderboardModal.classList.remove('active');
         if (this.partyModal) this.partyModal.classList.remove('active');
         if (this.pilotModal) this.pilotModal.classList.remove('active');
+        if (this.profileModal) this.profileModal.classList.remove('active');
 
         this.showAuthGate('Pilot logged out. Please authenticate with your callsign to enter the arcade matrix.');
         this.updateAuthUI();
@@ -903,9 +945,7 @@ class ArcadeHub {
             openAuthBtn.addEventListener('click', () => {
                 const user = window.KuraServer ? window.KuraServer.currentUser : null;
                 if (user) {
-                    if (confirm(`Logged in as [${user.username}]. Do you want to log out?`)) {
-                        this.logout();
-                    }
+                    this.openPilotProfileModal();
                 } else {
                     this.showAuthGate();
                 }
@@ -1055,26 +1095,65 @@ class ArcadeHub {
         const user = window.KuraServer ? window.KuraServer.currentUser : null;
         const navLabel = document.getElementById('pilot-nav-label');
         const navLed = document.getElementById('pilot-nav-led');
-        const navLogoutBtn = document.getElementById('nav-logout-btn');
-        const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
+        const navProfilePic = document.getElementById('nav-profile-pic');
+        const navProfileDefaultIcon = document.getElementById('nav-profile-default-icon');
+
+        const mobileProfileTitle = document.getElementById('mobile-profile-title');
+        const mobileProfilePic = document.getElementById('mobile-profile-pic');
+        const mobileProfileDefaultIcon = document.getElementById('mobile-profile-default-icon');
+
         const hudPilotBadge = document.getElementById('hud-pilot-badge');
         const hudPilotName = document.getElementById('hud-pilot-name');
+        const hudProfilePic = document.getElementById('hud-profile-pic');
+        const hudProfileDefaultIcon = document.getElementById('hud-profile-default-icon');
+
         const lbPilotName = document.getElementById('lb-pilot-name');
 
         if (user) {
             const providerTag = user.provider === 'google' ? ' [G-VERIFIED]' : '';
-            if (navLabel) navLabel.textContent = `PILOT: ${user.username}${providerTag}`;
+            if (navLabel) navLabel.textContent = `PROFILE: ${user.username}${providerTag}`;
             if (navLed) {
                 navLed.style.background = 'var(--neon-green)';
                 navLed.style.boxShadow = '0 0 10px var(--neon-green)';
             }
-            if (navLogoutBtn) navLogoutBtn.classList.remove('hidden');
-            if (mobileLogoutBtn) mobileLogoutBtn.classList.remove('hidden');
 
-            if (hudPilotName) hudPilotName.textContent = `PILOT: ${user.username}`;
-            if (hudPilotBadge) hudPilotBadge.title = `Authenticated Pilot: ${user.username} [VERIFIED]`;
+            // Top Nav Avatar Display
+            if (user.avatar && navProfilePic) {
+                navProfilePic.src = user.avatar;
+                navProfilePic.classList.remove('hidden');
+                if (navProfileDefaultIcon) navProfileDefaultIcon.classList.add('hidden');
+            } else if (navProfileDefaultIcon) {
+                navProfileDefaultIcon.textContent = getPresetAvatarIcon(user.avatar_id || 1);
+                navProfileDefaultIcon.classList.remove('hidden');
+                if (navProfilePic) navProfilePic.classList.add('hidden');
+            }
 
-            if (lbPilotName) lbPilotName.textContent = `PILOT: ${user.username}${providerTag}`;
+            // Mobile Command Menu Avatar
+            if (mobileProfileTitle) mobileProfileTitle.textContent = `PROFILE: ${user.username}`;
+            if (user.avatar && mobileProfilePic) {
+                mobileProfilePic.src = user.avatar;
+                mobileProfilePic.classList.remove('hidden');
+                if (mobileProfileDefaultIcon) mobileProfileDefaultIcon.classList.add('hidden');
+            } else if (mobileProfileDefaultIcon) {
+                mobileProfileDefaultIcon.textContent = getPresetAvatarIcon(user.avatar_id || 1);
+                mobileProfileDefaultIcon.classList.remove('hidden');
+                if (mobileProfilePic) mobileProfilePic.classList.add('hidden');
+            }
+
+            // In-game Floating HUD Avatar
+            if (hudPilotName) hudPilotName.textContent = `PROFILE: ${user.username}`;
+            if (hudPilotBadge) hudPilotBadge.title = `Authenticated Pilot: ${user.username} [VERIFIED] (Click to open profile)`;
+            if (user.avatar && hudProfilePic) {
+                hudProfilePic.src = user.avatar;
+                hudProfilePic.classList.remove('hidden');
+                if (hudProfileDefaultIcon) hudProfileDefaultIcon.classList.add('hidden');
+            } else if (hudProfileDefaultIcon) {
+                hudProfileDefaultIcon.textContent = getPresetAvatarIcon(user.avatar_id || 1);
+                hudProfileDefaultIcon.classList.remove('hidden');
+                if (hudProfilePic) hudProfilePic.classList.add('hidden');
+            }
+
+            if (lbPilotName) lbPilotName.textContent = `PROFILE: ${user.username}${providerTag}`;
 
             // Update Multiplayer callsign
             if (window.KuraMultiplayer) {
@@ -1084,16 +1163,32 @@ class ArcadeHub {
                 this.playerNameInput.value = user.username;
             }
         } else {
-            if (navLabel) navLabel.textContent = 'PILOT LOGIN';
+            if (navLabel) navLabel.textContent = 'PILOT PROFILE';
             if (navLed) {
                 navLed.style.background = 'var(--neon-coral)';
                 navLed.style.boxShadow = '0 0 8px var(--neon-coral)';
             }
-            if (navLogoutBtn) navLogoutBtn.classList.add('hidden');
-            if (mobileLogoutBtn) mobileLogoutBtn.classList.add('hidden');
+            if (navProfilePic) navProfilePic.classList.add('hidden');
+            if (navProfileDefaultIcon) {
+                navProfileDefaultIcon.textContent = '👤';
+                navProfileDefaultIcon.classList.remove('hidden');
+            }
 
-            if (hudPilotName) hudPilotName.textContent = 'PILOT: GUEST';
+            if (mobileProfileTitle) mobileProfileTitle.textContent = 'PROFILE // LOGIN';
+            if (mobileProfilePic) mobileProfilePic.classList.add('hidden');
+            if (mobileProfileDefaultIcon) {
+                mobileProfileDefaultIcon.textContent = '👤';
+                mobileProfileDefaultIcon.classList.remove('hidden');
+            }
+
+            if (hudPilotName) hudPilotName.textContent = 'PROFILE: GUEST';
             if (hudPilotBadge) hudPilotBadge.title = 'Restricted: Guest Play Disabled';
+            if (hudProfilePic) hudProfilePic.classList.add('hidden');
+            if (hudProfileDefaultIcon) {
+                hudProfileDefaultIcon.textContent = '👤';
+                hudProfileDefaultIcon.classList.remove('hidden');
+            }
+
             if (lbPilotName) lbPilotName.textContent = 'GUEST (NOT LOGGED IN)';
         }
     }
@@ -1188,25 +1283,553 @@ class ArcadeHub {
             return;
         }
 
+        // Update active user avatar preview in leaderboard banner
+        const myAvatarImg = document.getElementById('lb-my-avatar-img');
+        if (myAvatarImg) {
+            if (data && data.userAvatar) {
+                myAvatarImg.src = data.userAvatar;
+                myAvatarImg.classList.remove('hidden');
+            } else if (currentUser && currentUser.avatar) {
+                myAvatarImg.src = currentUser.avatar;
+                myAvatarImg.classList.remove('hidden');
+            } else {
+                myAvatarImg.classList.add('hidden');
+            }
+        }
+
         tbody.innerHTML = scores.map((item, idx) => {
             const isCurrent = currentUser && currentUser.username.toUpperCase() === item.username.toUpperCase();
             const rankNum = item.rank || (idx + 1);
             const rankBadge = rankNum === 1 ? '🥇 #1' : rankNum === 2 ? '🥈 #2' : rankNum === 3 ? '🥉 #3' : `#${rankNum}`;
             const statText = gameId === 'flash-reflex' ? `${item.score} ms` : gameId === 'neon-dash' ? `${item.score}m` : `${item.score} pts`;
 
+            const avatarHtml = item.avatar
+                ? `<img class="lb-avatar-img" src="${item.avatar}" alt="${item.username}">`
+                : `<span class="lb-avatar-icon">${getPresetAvatarIcon(item.avatar_id || 1)}</span>`;
+
             return `
                 <tr class="${isCurrent ? 'lb-current-pilot-row' : ''}">
                     <td><strong style="color: ${rankNum <= 3 ? 'var(--neon-green)' : 'var(--text-muted)'}; font-family: 'JetBrains Mono', monospace;">${rankBadge}</strong></td>
                     <td>
-                        <strong style="color: ${isCurrent ? 'var(--neon-cyan)' : '#FFFFFF'}; font-family: 'Space Grotesk', sans-serif;">${item.username}</strong>
-                        ${isCurrent ? `<span style="font-size: 10px; background: rgba(0, 217, 245, 0.2); color: var(--neon-cyan); padding: 2px 6px; border-radius: 4px; margin-left: 6px; border: 1px solid var(--neon-cyan); font-weight: 700;">YOU</span>` : ''}
-                        ${item.title ? `<span style="font-size: 9px; color: var(--neon-emerald); margin-left: 6px; padding: 2px 6px; border: 1px solid var(--neon-emerald); border-radius: 4px;">${item.title}</span>` : ''}
+                        <div class="lb-pilot-cell">
+                            <div class="lb-avatar-wrap">${avatarHtml}</div>
+                            <div>
+                                <strong class="clickable-callsign" data-callsign="${item.username}" style="color: ${isCurrent ? 'var(--neon-cyan)' : '#FFFFFF'}; font-family: 'Space Grotesk', sans-serif;" title="Click to inspect pilot dossier">${item.username}</strong>
+                                ${isCurrent ? `<span style="font-size: 10px; background: rgba(0, 217, 245, 0.2); color: var(--neon-cyan); padding: 2px 6px; border-radius: 4px; margin-left: 6px; border: 1px solid var(--neon-cyan); font-weight: 700;">YOU</span>` : ''}
+                                ${item.title ? `<span style="font-size: 9px; color: var(--neon-emerald); margin-left: 6px; padding: 2px 6px; border: 1px solid var(--neon-emerald); border-radius: 4px;">${item.title}</span>` : ''}
+                            </div>
+                        </div>
                     </td>
                     <td style="color: var(--neon-cyan); font-family: 'JetBrains Mono', monospace; font-weight: 700;">${statText}</td>
                     <td style="color: var(--neon-emerald); font-family: 'JetBrains Mono', monospace; font-size: 11px;">✓ VERIFIED</td>
                 </tr>
             `;
         }).join('');
+
+        // Attach click listeners to clickable-callsigns
+        tbody.querySelectorAll('.clickable-callsign').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const callsign = el.getAttribute('data-callsign');
+                if (callsign) {
+                    this.openPilotProfileModal(callsign);
+                }
+            });
+        });
+    }
+
+    // ==============================================================
+    // PILOT PROFILE // DOSSIER SYSTEM
+    // ==============================================================
+    initPilotProfile() {
+        const closeBtn = document.getElementById('close-profile-modal');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                if (window.KuraSounds) window.KuraSounds.playClick();
+                if (this.profileModal) this.profileModal.classList.remove('active');
+            });
+        }
+
+        // Mobile command menu trigger
+        const mobileProfileBtn = document.getElementById('mobile-profile-btn');
+        if (mobileProfileBtn) {
+            mobileProfileBtn.addEventListener('click', () => {
+                if (this.mobileDrawer) this.mobileDrawer.classList.remove('active');
+                const user = window.KuraServer ? window.KuraServer.currentUser : null;
+                if (user) {
+                    this.openPilotProfileModal();
+                } else {
+                    this.showAuthGate();
+                }
+            });
+        }
+
+        // Floating In-game HUD triggers
+        const hudProfileBtn = document.getElementById('hud-profile-btn');
+        if (hudProfileBtn) {
+            hudProfileBtn.addEventListener('click', () => {
+                const user = window.KuraServer ? window.KuraServer.currentUser : null;
+                if (user) {
+                    this.openPilotProfileModal();
+                } else {
+                    this.showAuthGate();
+                }
+            });
+        }
+
+        const hudPilotBadge = document.getElementById('hud-pilot-badge');
+        if (hudPilotBadge) {
+            hudPilotBadge.addEventListener('click', () => {
+                const user = window.KuraServer ? window.KuraServer.currentUser : null;
+                if (user) {
+                    this.openPilotProfileModal();
+                } else {
+                    this.showAuthGate();
+                }
+            });
+        }
+
+        // Drawer Edit Toggle
+        const toggleEditDrawerBtn = document.getElementById('btn-toggle-edit-drawer');
+        const editSectorToggleBtn = document.getElementById('btn-edit-sector-toggle');
+        const editDrawer = document.getElementById('dossier-edit-drawer');
+        const closeDrawerBtn = document.getElementById('btn-close-drawer');
+
+        const toggleDrawer = () => {
+            if (!editDrawer) return;
+            const isHidden = editDrawer.classList.contains('hidden');
+            if (isHidden) {
+                editDrawer.classList.remove('hidden');
+            } else {
+                editDrawer.classList.add('hidden');
+            }
+        };
+
+        if (toggleEditDrawerBtn) toggleEditDrawerBtn.addEventListener('click', toggleDrawer);
+        if (editSectorToggleBtn) editSectorToggleBtn.addEventListener('click', toggleDrawer);
+        if (closeDrawerBtn) closeDrawerBtn.addEventListener('click', () => editDrawer && editDrawer.classList.add('hidden'));
+
+        // Preset Cyber Avatars
+        const presetCards = document.querySelectorAll('.cyber-preset-card');
+        presetCards.forEach(card => {
+            card.addEventListener('click', () => {
+                presetCards.forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                this.selectedAvatarId = parseInt(card.getAttribute('data-id'), 10) || 1;
+                this.customAvatarDataUrl = ''; // Clear custom photo if preset selected
+
+                // Live Preview in Avatar Frame
+                const img = document.getElementById('dossier-avatar-img');
+                const icon = document.getElementById('dossier-avatar-icon');
+                if (img) img.classList.add('hidden');
+                if (icon) {
+                    icon.textContent = card.getAttribute('data-icon') || '⚡';
+                    icon.classList.remove('hidden');
+                }
+                if (window.KuraSounds) window.KuraSounds.playClick();
+            });
+        });
+
+        // Custom Photo Upload via File Input
+        const fileInput = document.getElementById('dossier-photo-file-input');
+        const triggerUpload = () => {
+            if (fileInput) fileInput.click();
+        };
+
+        const uploadTrigger = document.getElementById('dossier-photo-upload-trigger');
+        const btnAvatarEdit = document.getElementById('dossier-btn-avatar-edit');
+        const btnTriggerDrawer = document.getElementById('btn-trigger-upload-drawer');
+
+        if (uploadTrigger) uploadTrigger.addEventListener('click', triggerUpload);
+        if (btnAvatarEdit) btnAvatarEdit.addEventListener('click', triggerUpload);
+        if (btnTriggerDrawer) btnTriggerDrawer.addEventListener('click', triggerUpload);
+
+        if (fileInput) {
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+
+                if (!file.type.startsWith('image/')) {
+                    alert('Please select a valid image file (PNG, JPG, WebP).');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (loadEvt) => {
+                    const tempImg = new Image();
+                    tempImg.onload = () => {
+                        // High-tech square compression canvas (120x120)
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 120;
+                        canvas.height = 120;
+                        const ctx = canvas.getContext('2d');
+
+                        // Center crop & cover
+                        const minDim = Math.min(tempImg.width, tempImg.height);
+                        const sx = (tempImg.width - minDim) / 2;
+                        const sy = (tempImg.height - minDim) / 2;
+                        ctx.drawImage(tempImg, sx, sy, minDim, minDim, 0, 0, 120, 120);
+
+                        this.customAvatarDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+                        // Live preview
+                        const img = document.getElementById('dossier-avatar-img');
+                        const icon = document.getElementById('dossier-avatar-icon');
+                        if (img) {
+                            img.src = this.customAvatarDataUrl;
+                            img.classList.remove('hidden');
+                        }
+                        if (icon) icon.classList.add('hidden');
+
+                        presetCards.forEach(c => c.classList.remove('active'));
+                    };
+                    tempImg.src = loadEvt.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Bio character count
+        const bioTextarea = document.getElementById('edit-bio-textarea');
+        const bioCount = document.getElementById('edit-bio-count');
+        if (bioTextarea && bioCount) {
+            bioTextarea.addEventListener('input', () => {
+                bioCount.textContent = bioTextarea.value.length;
+            });
+        }
+
+        // Save Dossier Changes Button
+        const saveBtn = document.getElementById('btn-save-dossier-changes');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', async () => {
+                const sectorSelect = document.getElementById('edit-primary-sector');
+                const bioInput = document.getElementById('edit-bio-textarea');
+                const statusMsg = document.getElementById('drawer-status-msg');
+
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<span>SAVING...</span>';
+
+                const payload = {
+                    avatar_id: this.selectedAvatarId || 1,
+                    primary_sector: sectorSelect ? sectorSelect.value : 'AIM MATRIX',
+                    bio: bioInput ? bioInput.value.trim() : ''
+                };
+                if (this.customAvatarDataUrl) {
+                    payload.avatar = this.customAvatarDataUrl;
+                }
+
+                const res = await window.KuraServer.updateProfile(payload);
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<span>💾 SAVE CHANGES</span>';
+
+                if (res.success) {
+                    if (statusMsg) {
+                        statusMsg.textContent = 'Dossier successfully updated!';
+                        statusMsg.classList.remove('hidden');
+                        setTimeout(() => statusMsg.classList.add('hidden'), 2500);
+                    }
+                    if (window.KuraSounds) window.KuraSounds.synthAccessGrantedSlam();
+                    this.updateAuthUI();
+                    if (editDrawer) editDrawer.classList.add('hidden');
+                    // Re-render dossier
+                    const user = window.KuraServer.currentUser;
+                    if (user) this.openPilotProfileModal(user.username);
+                } else {
+                    alert(`Update Failed: ${res.error || 'Server error'}`);
+                }
+            });
+        }
+
+        // Copy Profile Card button
+        const btnCopyCard = document.getElementById('btn-copy-profile-card');
+        if (btnCopyCard) {
+            btnCopyCard.addEventListener('click', () => {
+                const currentDossier = this.currentActiveDossier;
+                if (!currentDossier) return;
+
+                const topScore = (currentDossier.performanceMatrix && currentDossier.performanceMatrix.length)
+                    ? Math.max(...currentDossier.performanceMatrix.map(p => p.bestScore || 0))
+                    : 0;
+
+                const text = `[KURA ARCADE PILOT DOSSIER]\nCallsign: ${currentDossier.username}\nUID: ${currentDossier.uid}\nClearance Title: ${currentDossier.title}\nPrimary Sector: ${currentDossier.primary_sector}\nCareer Best: ${topScore} PTS\nVerified on KURA: https://kura-play.vercel.app`;
+
+                navigator.clipboard.writeText(text).then(() => {
+                    btnCopyCard.innerHTML = '<span>✓</span> COPIED TO CLIPBOARD!';
+                    setTimeout(() => {
+                        btnCopyCard.innerHTML = '<span>📋</span> COPY PROFILE CARD';
+                    }, 2000);
+                }).catch(() => {});
+            });
+        }
+
+        // Copy UID button
+        const btnCopyUid = document.getElementById('btn-copy-uid');
+        if (btnCopyUid) {
+            btnCopyUid.addEventListener('click', () => {
+                const uidEl = document.getElementById('dossier-uid');
+                if (uidEl) {
+                    navigator.clipboard.writeText(uidEl.textContent.trim()).then(() => {
+                        btnCopyUid.textContent = '✓';
+                        setTimeout(() => { btnCopyUid.textContent = '📋'; }, 2000);
+                    }).catch(() => {});
+                }
+            });
+        }
+
+        // Logout inside profile modal
+        const logoutBtn = document.getElementById('btn-dossier-logout');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                if (window.KuraSounds) window.KuraSounds.playClick();
+                if (confirm('Are you sure you want to log out of your pilot profile?')) {
+                    if (this.profileModal) this.profileModal.classList.remove('active');
+                    await this.logout();
+                }
+            });
+        }
+
+        // Challenge to Party button
+        const btnChallenge = document.getElementById('btn-challenge-party');
+        if (btnChallenge) {
+            btnChallenge.addEventListener('click', () => {
+                if (this.profileModal) this.profileModal.classList.remove('active');
+                this.openPartyModal();
+            });
+        }
+
+        // Compare Records button
+        const btnCompare = document.getElementById('btn-compare-records');
+        if (btnCompare) {
+            btnCompare.addEventListener('click', () => {
+                this.isComparingRecords = !this.isComparingRecords;
+                const legend = document.getElementById('compare-legend');
+                if (legend) {
+                    if (this.isComparingRecords) legend.classList.remove('hidden');
+                    else legend.classList.add('hidden');
+                }
+                btnCompare.style.background = this.isComparingRecords ? 'var(--neon-cyan)' : '';
+                btnCompare.style.color = this.isComparingRecords ? '#000' : '';
+                if (this.currentActiveDossier) {
+                    this.renderPerformanceMatrix(this.currentActiveDossier);
+                }
+            });
+        }
+
+        // View My Profile button
+        const btnBackMyProfile = document.getElementById('btn-back-my-profile');
+        if (btnBackMyProfile) {
+            btnBackMyProfile.addEventListener('click', () => {
+                const user = window.KuraServer ? window.KuraServer.currentUser : null;
+                if (user) {
+                    this.isComparingRecords = false;
+                    this.openPilotProfileModal(user.username);
+                }
+            });
+        }
+    }
+
+    async openPilotProfileModal(targetCallsign = '') {
+        const currentUser = window.KuraServer ? window.KuraServer.currentUser : null;
+        const callsign = (targetCallsign || (currentUser ? currentUser.username : '')).trim();
+
+        if (!callsign) {
+            this.showAuthGate();
+            return;
+        }
+
+        if (this.profileModal) {
+            this.profileModal.classList.add('active');
+            if (window.KuraSounds) window.KuraSounds.playClick();
+        }
+
+        const headline = document.getElementById('dossier-modal-headline');
+        if (headline) headline.textContent = `PILOT DOSSIER // ARCHIVE #${callsign.toUpperCase()}`;
+
+        // Fetch dossier from backend
+        const dossier = await window.KuraServer.fetchProfile(callsign);
+        if (!dossier) {
+            alert(`Pilot dossier for [${callsign}] could not be found.`);
+            if (this.profileModal) this.profileModal.classList.remove('active');
+            return;
+        }
+
+        this.renderDossier(dossier);
+    }
+
+    renderDossier(dossier) {
+        this.currentActiveDossier = dossier;
+
+        // Avatar Frame & Photo
+        const avatarFrame = document.getElementById('dossier-avatar-frame');
+        const avatarImg = document.getElementById('dossier-avatar-img');
+        const avatarIcon = document.getElementById('dossier-avatar-icon');
+
+        if (avatarFrame) {
+            avatarFrame.className = 'dossier-avatar-frame';
+            if (dossier.title === 'Arcade Architect' || dossier.title === 'Cyber Legend') {
+                avatarFrame.classList.add('rank-frame-legend');
+            } else if (dossier.title === 'Synaptic Ace') {
+                avatarFrame.classList.add('rank-frame-ace');
+            } else if (dossier.title === 'Grid Runner') {
+                avatarFrame.classList.add('rank-frame-runner');
+            } else {
+                avatarFrame.classList.add('rank-frame-cadet');
+            }
+        }
+
+        if (dossier.avatar && avatarImg) {
+            avatarImg.src = dossier.avatar;
+            avatarImg.classList.remove('hidden');
+            if (avatarIcon) avatarIcon.classList.add('hidden');
+        } else if (avatarIcon) {
+            avatarIcon.textContent = getPresetAvatarIcon(dossier.avatar_id || 1);
+            avatarIcon.classList.remove('hidden');
+            if (avatarImg) avatarImg.classList.add('hidden');
+        }
+
+        // ID Header details
+        const callsignEl = document.getElementById('dossier-callsign');
+        const titleEl = document.getElementById('dossier-clearance-title');
+        const googleBadge = document.getElementById('dossier-google-badge');
+        const uidEl = document.getElementById('dossier-uid');
+        const enlistedEl = document.getElementById('dossier-enlisted-date');
+        const sectorBadge = document.getElementById('dossier-sector-badge');
+        const bioText = document.getElementById('dossier-bio-text');
+        const modeTag = document.getElementById('dossier-mode-label');
+
+        if (callsignEl) callsignEl.textContent = dossier.username;
+        if (titleEl) titleEl.textContent = dossier.title.toUpperCase();
+        if (googleBadge) {
+            if (dossier.isGoogle) googleBadge.classList.remove('hidden');
+            else googleBadge.classList.add('hidden');
+        }
+        if (uidEl) uidEl.textContent = dossier.uid;
+        if (enlistedEl) enlistedEl.textContent = dossier.enlistedAt || '2026-10-31';
+        if (sectorBadge) sectorBadge.textContent = dossier.primary_sector;
+        if (bioText) bioText.textContent = dossier.bio || 'No pilot bio transmitted yet.';
+
+        // Section A: Actions visibility
+        const uploadTrigger = document.getElementById('dossier-photo-upload-trigger');
+        const btnAvatarEdit = document.getElementById('dossier-btn-avatar-edit');
+        const btnEditSector = document.getElementById('btn-edit-sector-toggle');
+        const ownActions = document.getElementById('dossier-own-actions');
+        const otherActions = document.getElementById('dossier-other-actions');
+
+        if (dossier.isOwn) {
+            if (modeTag) modeTag.textContent = 'PERSONAL DOSSIER';
+            if (uploadTrigger) uploadTrigger.classList.remove('hidden');
+            if (btnAvatarEdit) btnAvatarEdit.classList.remove('hidden');
+            if (btnEditSector) btnEditSector.classList.remove('hidden');
+            if (ownActions) ownActions.classList.remove('hidden');
+            if (otherActions) otherActions.classList.add('hidden');
+
+            // Pre-fill drawer inputs
+            const editSector = document.getElementById('edit-primary-sector');
+            const editBio = document.getElementById('edit-bio-textarea');
+            const editBioCount = document.getElementById('edit-bio-count');
+            if (editSector) editSector.value = dossier.primary_sector;
+            if (editBio) editBio.value = dossier.bio || '';
+            if (editBioCount) editBioCount.textContent = (dossier.bio || '').length;
+
+            // Highlight selected preset
+            document.querySelectorAll('.cyber-preset-card').forEach(c => {
+                if (parseInt(c.dataset.id, 10) === (dossier.avatar_id || 1)) c.classList.add('active');
+                else c.classList.remove('active');
+            });
+        } else {
+            if (modeTag) modeTag.textContent = 'PUBLIC DOSSIER [INSPECTING]';
+            if (uploadTrigger) uploadTrigger.classList.add('hidden');
+            if (btnAvatarEdit) btnAvatarEdit.classList.add('hidden');
+            if (btnEditSector) btnEditSector.classList.add('hidden');
+            if (ownActions) ownActions.classList.add('hidden');
+            if (otherActions) otherActions.classList.remove('hidden');
+
+            const editDrawer = document.getElementById('dossier-edit-drawer');
+            if (editDrawer) editDrawer.classList.add('hidden');
+        }
+
+        // Section B: 5-Sector Performance Matrix
+        this.renderPerformanceMatrix(dossier);
+
+        // Section C: Lifetime Telemetry & Medals
+        const statGames = document.getElementById('dossier-stat-games');
+        const statTop10 = document.getElementById('dossier-stat-top10');
+        const statPartyWins = document.getElementById('dossier-stat-party-wins');
+
+        if (statGames) statGames.textContent = dossier.totalGames || 0;
+        if (statTop10) statTop10.textContent = dossier.top10Finishes || 0;
+        if (statPartyWins) statPartyWins.textContent = dossier.partyWins || 0;
+
+        // Render Medals
+        const medalsContainer = document.getElementById('dossier-medals-container');
+        if (medalsContainer && dossier.medalCatalog) {
+            medalsContainer.innerHTML = dossier.medalCatalog.map(medal => {
+                const isUnlocked = dossier.unlockedMedals && dossier.unlockedMedals.includes(medal.id);
+                return `
+                    <div class="medal-badge ${isUnlocked ? 'unlocked' : 'locked'}">
+                        <span class="medal-icon">${medal.icon}</span>
+                        <span class="medal-name">${medal.name}</span>
+                        <span class="medal-status">${isUnlocked ? 'UNLOCKED' : 'LOCKED'}</span>
+                        <div class="medal-tooltip">
+                            <strong style="color:var(--neon-cyan);">${medal.name} [${medal.rarity}]</strong><br>
+                            ${medal.desc}<br>
+                            <span style="color:${isUnlocked ? 'var(--neon-green)' : 'var(--neon-coral)'}; font-weight:700;">
+                                ${isUnlocked ? '✓ EARNED' : '🔒 REQUIREMENTS UNMET'}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    }
+
+    renderPerformanceMatrix(dossier) {
+        const perfGrid = document.getElementById('dossier-performance-grid');
+        if (!perfGrid || !dossier.performanceMatrix) return;
+
+        perfGrid.innerHTML = dossier.performanceMatrix.map(sec => {
+            const hasPlayed = sec.bestScore !== null && sec.bestScore !== undefined;
+            const scoreDisplay = hasPlayed
+                ? (sec.id === 'flash-reflex' ? `${sec.bestScore} MS` : sec.id === 'neon-dash' ? `${sec.bestScore} m` : `${sec.bestScore} PTS`)
+                : '--';
+
+            const rankDisplay = sec.rank ? `RANK #${sec.rank}` : 'UNRANKED';
+            const rankClass = sec.rank ? '' : 'unranked';
+
+            let compareHtml = '';
+            if (this.isComparingRecords && dossier.comparison && dossier.comparison[sec.id]) {
+                const cmp = dossier.comparison[sec.id];
+                if (cmp.status === 'YOU_LEAD') {
+                    const diffText = cmp.diff !== null ? `(+${cmp.diff})` : '';
+                    compareHtml = `<span class="perf-compare-chip lead">▲ YOU LEAD ${diffText}</span>`;
+                } else if (cmp.status === 'THEY_LEAD') {
+                    const diffText = cmp.diff !== null ? `(${cmp.diff})` : '';
+                    compareHtml = `<span class="perf-compare-chip trail">▼ THEY LEAD ${diffText}</span>`;
+                } else if (cmp.status === 'TIED') {
+                    compareHtml = `<span class="perf-compare-chip tie">= TIED</span>`;
+                }
+            }
+
+            return `
+                <div class="perf-matrix-card">
+                    <div class="perf-card-header">
+                        <span class="perf-card-icon">${sec.icon}</span>
+                        <span class="perf-card-title">${sec.name}</span>
+                    </div>
+                    <div class="perf-best-val">${scoreDisplay}</div>
+                    <div class="perf-rank-tag ${rankClass}">${rankDisplay}</div>
+                    ${compareHtml}
+                </div>
+            `;
+        }).join('');
+    }
+
+    toggleProfileModal() {
+        if (this.profileModal && this.profileModal.classList.contains('active')) {
+            this.profileModal.classList.remove('active');
+        } else {
+            this.openPilotProfileModal();
+        }
     }
 
     checkUrlRoom() {

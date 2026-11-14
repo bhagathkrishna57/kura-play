@@ -1,0 +1,25 @@
+{
+  "name": "kura-play",
+  "version": "1.0.0",
+  "description": "> **Architect & Creator:** Bhagath Krishna.M   > **Official Repository:** [https://github.com/bhagathkrishna57/kura-play.git](https://github.com/bhagathkrishna57/kura-play.git)   > **System Version:** SYS.VER.2.4 // ZERO-BOREDOM PROTOCOL",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bhagathkrishna57/kura-play.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/bhagathkrishna57/kura-play/issues"
+  },
+  "homepage": "https://github.com/bhagathkrishna57/kura-play#readme",
+  "dependencies": {
+    "firebase": "^13.3.0"
+  }
+}

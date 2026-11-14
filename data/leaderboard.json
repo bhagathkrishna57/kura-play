@@ -3,18 +3,24 @@
     {
       "username": "PILOT6542",
       "score": 1850,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-11-14",
       "verified": true
     },
     {
       "username": "VIPER_1194",
       "score": 1450,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-11-14",
       "verified": true
     },
     {
       "username": "BHAGATH_KRISHNA",
       "score": 980,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-10-31",
       "verified": true,
       "title": "ARCADE ARCHITECT"
@@ -22,30 +28,40 @@
     {
       "username": "CYBER_NINJA",
       "score": 850,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-11-14",
       "verified": true
     },
     {
       "username": "CYBER_VIPER",
       "score": 720,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-10-31",
       "verified": true
     },
     {
       "username": "NEO_PHANTOM",
       "score": 540,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-10-30",
       "verified": true
     },
     {
       "username": "REFLEX_ZERO",
       "score": 410,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-10-30",
       "verified": true
     },
     {
       "username": "SHADOW_RUNNER",
       "score": 0,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-11-14",
       "verified": true
     }
@@ -54,6 +70,8 @@
     {
       "username": "BHAGATH_KRISHNA",
       "score": 1420,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-10-31",
       "verified": true,
       "title": "ARCADE ARCHITECT"
@@ -61,38 +79,58 @@
     {
       "username": "VOID_RUNNER",
       "score": 950,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-10-31",
       "verified": true
     },
     {
       "username": "TEST_PILOT",
       "score": 880,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-11-14",
       "verified": true
     },
     {
       "username": "VIPER_1194",
       "score": 820,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-11-14",
       "verified": true
     },
     {
       "username": "SPEED_GHOST",
       "score": 680,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-10-30",
       "verified": true
     },
     {
       "username": "ZACK",
       "score": 422,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-11-14",
       "verified": true
     }
   ],
   "flash-reflex": [
     {
+      "username": "PILOT2070",
+      "score": 135,
+      "avatar": "data:image/jpeg;base64,sample123",
+      "avatar_id": 4,
+      "date": "2026-11-14",
+      "verified": true
+    },
+    {
       "username": "BHAGATH_KRISHNA",
       "score": 142,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-10-31",
       "verified": true,
       "title": "ARCADE ARCHITECT"
@@ -100,18 +138,24 @@
     {
       "username": "SYNAPSE_99",
       "score": 178,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-10-31",
       "verified": true
     },
     {
       "username": "VIPER_1194",
       "score": 185,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-11-14",
       "verified": true
     },
     {
       "username": "QUANTUM_EYE",
       "score": 215,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-10-30",
       "verified": true
     }
@@ -120,12 +164,16 @@
     {
       "username": "VIPER_1194",
       "score": 2600,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-11-14",
       "verified": true
     },
     {
       "username": "BHAGATH_KRISHNA",
       "score": 1850,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-10-31",
       "verified": true,
       "title": "ARCADE ARCHITECT"
@@ -133,18 +181,24 @@
     {
       "username": "TEST_PILOT_63",
       "score": 1350,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-10-31",
       "verified": true
     },
     {
       "username": "BLADE_MASTER",
       "score": 1240,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-10-31",
       "verified": true
     },
     {
       "username": "LASER_CLAW",
       "score": 890,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-10-30",
       "verified": true
     }
@@ -153,6 +207,8 @@
     {
       "username": "BHAGATH_KRISHNA",
       "score": 1680,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-10-31",
       "verified": true,
       "title": "ARCADE ARCHITECT"
@@ -160,30 +216,40 @@
     {
       "username": "SHIELD_WARDEN",
       "score": 1120,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-10-31",
       "verified": true
     },
     {
       "username": "PHOTON_PULSE",
       "score": 840,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-10-30",
       "verified": true
     },
     {
       "username": "ORBIT_ZERO",
       "score": 620,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-10-30",
       "verified": true
     },
     {
       "username": "VIPER_1194",
       "score": 480,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-11-14",
       "verified": true
     },
     {
       "username": "ZACK",
       "score": 373,
+      "avatar": "",
+      "avatar_id": 1,
       "date": "2026-11-14",
       "verified": true
     }

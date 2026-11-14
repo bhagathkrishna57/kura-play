@@ -330,6 +330,51 @@ class KuraServerClient {
         return { success: true };
     }
 
+    // Update Pilot Profile (Avatar, About Bio, Sector, Email)
+    async updateProfile(profileData) {
+        if (!this.currentUser) {
+            return { success: false, error: 'Pilot must be logged in to update profile.' };
+        }
+
+        const headers = { 'Content-Type': 'application/json' };
+        if (this.token) {
+            headers['Authorization'] = `Bearer ${this.token}`;
+            headers['X-Auth-Token'] = this.token;
+        }
+
+        const res = await this.request('/api/profile/update', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(profileData || {})
+        });
+
+        if (res.ok && res.data.success && res.data.user) {
+            const merged = { ...this.currentUser, ...res.data.user };
+            this.saveLocalSession(merged, this.token);
+            return { success: true, user: merged, profile: res.data.profile };
+        }
+
+        return { success: false, error: res.error || 'Failed to update profile.' };
+    }
+
+    // Fetch Public Pilot Dossier (/api/profile/:callsign)
+    async fetchProfile(callsign = '') {
+        const target = callsign ? `/${encodeURIComponent(callsign)}` : '';
+        const headers = {};
+        if (this.token) {
+            headers['Authorization'] = `Bearer ${this.token}`;
+            headers['X-Auth-Token'] = this.token;
+        }
+        const res = await this.request(`/api/profile${target}`, {
+            method: 'GET',
+            headers
+        });
+        if (res.ok && res.data.success && res.data.profile) {
+            return res.data.profile;
+        }
+        return null;
+    }
+
     // Submit High Score to Permanent Database
     async submitScore(gameId, score) {
         if (!this.currentUser) {

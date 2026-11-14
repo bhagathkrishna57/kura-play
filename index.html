@@ -134,12 +134,13 @@
                 <button class="btn-nav nav-desktop-only" id="open-party-btn" title="Create or Join Multiplayer Party Lobby">
                     <span>👥</span> <span class="nav-btn-text">PARTY LOBBY</span>
                 </button>
-                <button class="btn-nav btn-pilot-auth" id="open-auth-btn">
-                    <span class="led-status" id="pilot-nav-led" style="background: var(--neon-coral); box-shadow: 0 0 8px var(--neon-coral);"></span>
-                    <span id="pilot-nav-label">PILOT LOGIN</span>
-                </button>
-                <button class="btn-nav btn-logout hidden" id="nav-logout-btn" title="Sign out of account">
-                    <span>⏻</span> <span class="nav-btn-text">LOGOUT</span>
+                <button class="btn-nav btn-pilot-auth btn-profile-nav" id="open-auth-btn" title="View & Edit Pilot Profile [Press P]">
+                    <div class="nav-profile-badge-wrap">
+                        <img id="nav-profile-pic" class="nav-profile-pic-img hidden" alt="Avatar">
+                        <span id="nav-profile-default-icon" class="nav-profile-icon">👤</span>
+                        <span class="led-status" id="pilot-nav-led" style="background: var(--neon-coral); box-shadow: 0 0 8px var(--neon-coral);"></span>
+                    </div>
+                    <span id="pilot-nav-label">PILOT PROFILE</span> <span class="nav-shortcut">[P]</span>
                 </button>
                 <button class="btn-nav btn-sound-toggle" id="toggle-sound-btn" title="Toggle Synthesizer Audio">
                     <span id="sound-icon">🔊</span>
@@ -161,6 +162,16 @@
                     <button class="mobile-nav-close" id="mobile-nav-close" aria-label="Close menu">✕</button>
                 </div>
                 <div class="mobile-nav-links">
+                    <button class="mobile-nav-item" id="mobile-profile-btn">
+                        <div class="mobile-profile-badge-wrap">
+                            <img id="mobile-profile-pic" class="mobile-profile-pic-img hidden" alt="Avatar">
+                            <span class="nav-item-icon" id="mobile-profile-default-icon">👤</span>
+                        </div>
+                        <div class="nav-item-text">
+                            <strong id="mobile-profile-title">PROFILE</strong>
+                            <span id="mobile-profile-sub">Avatar, about yourself & stats</span>
+                        </div>
+                    </button>
                     <button class="mobile-nav-item" id="mobile-lb-btn">
                         <span class="nav-item-icon">🏆</span>
                         <div class="nav-item-text">
@@ -180,13 +191,6 @@
                         <div class="nav-item-text">
                             <strong>JUMP COMBAT SECTOR</strong>
                             <span>Launch next game in sequence [N]</span>
-                        </div>
-                    </button>
-                    <button class="mobile-nav-item mobile-logout-item hidden" id="mobile-logout-btn">
-                        <span class="nav-item-icon" style="color:var(--neon-coral);">⏻</span>
-                        <div class="nav-item-text">
-                            <strong style="color:var(--neon-coral);">LOGOUT PILOT</strong>
-                            <span>Lock arcade & clear active session</span>
                         </div>
                     </button>
                     <a href="https://github.com/bhagathkrishna57/kura-play.git" target="_blank" rel="noopener" class="mobile-nav-item">
@@ -658,6 +662,224 @@
                         <span>No other pilots connected. Host a room to invite friends!</span>
                         <span style="color: var(--text-dim); font-size: 11px;">STANDBY</span>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pilot Profile // Dossier Modal -->
+    <div class="modal-overlay" id="profile-modal">
+        <div class="modal-box profile-modal-box">
+            <button class="modal-close" id="close-profile-modal" aria-label="Close Dossier">✕</button>
+
+            <!-- Modal Header Title -->
+            <div class="dossier-top-bar">
+                <div class="dossier-title-group">
+                    <span class="dossier-icon">📁</span>
+                    <div>
+                        <h2 class="modal-title" id="dossier-modal-headline">PILOT DOSSIER // CLASSIFIED TELEMETRY</h2>
+                        <p class="modal-subtitle">Official verified pilot record & combat diagnostics.</p>
+                    </div>
+                </div>
+                <div class="dossier-mode-badge" id="dossier-view-mode-tag">
+                    <span class="led-status" id="dossier-status-led"></span>
+                    <span id="dossier-mode-label">PERSONAL DOSSIER</span>
+                </div>
+            </div>
+
+            <!-- SECTION A: PILOT ID HEADER -->
+            <div class="dossier-section dossier-header-card">
+                <div class="dossier-avatar-col">
+                    <div class="dossier-avatar-frame rank-frame-cadet" id="dossier-avatar-frame">
+                        <img id="dossier-avatar-img" class="dossier-avatar-photo hidden" alt="Avatar">
+                        <div id="dossier-avatar-icon" class="dossier-avatar-icon">⚡</div>
+                        <button type="button" class="dossier-photo-upload-btn hidden" id="dossier-photo-upload-trigger" title="Upload Custom Photo">📷</button>
+                    </div>
+                    <input type="file" id="dossier-photo-file-input" accept="image/*" class="hidden">
+                    <button type="button" class="btn-avatar-edit hidden" id="dossier-btn-avatar-edit">
+                        <span>CHANGE PHOTO</span>
+                    </button>
+                </div>
+
+                <div class="dossier-id-col">
+                    <div class="dossier-name-row">
+                        <h1 class="dossier-callsign" id="dossier-callsign">VIPER_99</h1>
+                        <span class="dossier-badge-pill" id="dossier-clearance-title">CADET</span>
+                        <span class="dossier-google-badge hidden" id="dossier-google-badge" title="Verified Google Sign-In">G-VERIFIED</span>
+                    </div>
+
+                    <div class="dossier-meta-row">
+                        <div class="dossier-uid-box" id="dossier-uid-container" title="Click to copy Pilot UID">
+                            <span class="uid-label">PILOT UID:</span>
+                            <span class="uid-code" id="dossier-uid">#KURA-0001</span>
+                            <button type="button" class="btn-copy-uid" id="btn-copy-uid" title="Copy UID">📋</button>
+                        </div>
+                        <div class="dossier-enlist-date">
+                            <span>ENLISTED:</span> <strong id="dossier-enlisted-date">2026-10-31</strong>
+                        </div>
+                    </div>
+
+                    <!-- Primary Tactical Sector Badge -->
+                    <div class="dossier-sector-row">
+                        <span class="sector-tag-label">PRIMARY SECTOR:</span>
+                        <span class="dossier-sector-badge" id="dossier-sector-badge">🎯 AIM MATRIX</span>
+                        <button type="button" class="btn-mini-edit hidden" id="btn-edit-sector-toggle" title="Update Primary Sector">✏️ EDIT</button>
+                    </div>
+
+                    <!-- About Yourself / Bio Snippet -->
+                    <div class="dossier-bio-card">
+                        <div class="bio-card-title">ABOUT YOURSELF:</div>
+                        <p class="dossier-bio-text" id="dossier-bio-text">No pilot bio transmitted yet. Click Edit to enter your battle philosophy.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Avatar & Sector Edit Drawer (Collapsible for own profile) -->
+            <div class="dossier-edit-drawer hidden" id="dossier-edit-drawer">
+                <div class="drawer-header">
+                    <span>⚙️ CUSTOMIZE DOSSIER (AVATAR & SECTOR)</span>
+                    <button type="button" class="btn-close-drawer" id="btn-close-drawer">✕</button>
+                </div>
+                <div class="drawer-body">
+                    <!-- 6 Preset Cyber Icons -->
+                    <div class="preset-avatar-group">
+                        <label class="input-label">CHOOSE PRESET CYBER AVATAR</label>
+                        <div class="cyber-presets-grid" id="cyber-presets-grid">
+                            <button type="button" class="cyber-preset-card active" data-id="1" data-icon="⚡">
+                                <span class="preset-sym">⚡</span>
+                                <span class="preset-lbl">Neon Spark</span>
+                            </button>
+                            <button type="button" class="cyber-preset-card" data-id="2" data-icon="🤖">
+                                <span class="preset-sym">🤖</span>
+                                <span class="preset-lbl">Android</span>
+                            </button>
+                            <button type="button" class="cyber-preset-card" data-id="3" data-icon="🎯">
+                                <span class="preset-sym">🎯</span>
+                                <span class="preset-lbl">Aim Master</span>
+                            </button>
+                            <button type="button" class="cyber-preset-card" data-id="4" data-icon="🛡️">
+                                <span class="preset-sym">🛡️</span>
+                                <span class="preset-lbl">Sentinel</span>
+                            </button>
+                            <button type="button" class="cyber-preset-card" data-id="5" data-icon="⚔️">
+                                <span class="preset-sym">⚔️</span>
+                                <span class="preset-lbl">Slicer</span>
+                            </button>
+                            <button type="button" class="cyber-preset-card" data-id="6" data-icon="🌌">
+                                <span class="preset-sym">🌌</span>
+                                <span class="preset-lbl">Void Walker</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Custom Photo Upload Button -->
+                    <div class="custom-photo-upload-row">
+                        <button type="button" class="btn-upload-custom-photo" id="btn-trigger-upload-drawer">
+                            <span>📷</span> UPLOAD CUSTOM PROFILE PICTURE
+                        </button>
+                        <span class="upload-hint">Auto-compressed 120x120 for fast sync</span>
+                    </div>
+
+                    <!-- Sector & Bio Edit Inputs -->
+                    <div class="drawer-form-grid">
+                        <div class="input-group">
+                            <label class="input-label">PRIMARY TACTICAL SECTOR</label>
+                            <select id="edit-primary-sector" class="text-input" style="background: rgba(14, 18, 27, 0.95); cursor: pointer;">
+                                <option value="AIM MATRIX">SECTOR 01 // AIM MATRIX (Precision)</option>
+                                <option value="NEON DASH">SECTOR 02 // NEON DASH (Runner)</option>
+                                <option value="FLASH REFLEX">SECTOR 03 // FLASH REFLEX (Reaction)</option>
+                                <option value="CYBER SLICER">SECTOR 04 // CYBER SLICER (Kinetic)</option>
+                                <option value="PULSE DEFLECTOR">SECTOR 05 // PULSE DEFLECTOR (Defense)</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">ABOUT YOURSELF // PILOT BIO (MAX 300 CHARS)</label>
+                            <textarea id="edit-bio-textarea" class="text-input" rows="2" maxlength="300" placeholder="Share your gaming setup, high score records, or combat style..."></textarea>
+                            <div class="char-count"><span id="edit-bio-count">0</span> / 300</div>
+                        </div>
+                    </div>
+
+                    <div id="drawer-status-msg" class="profile-feedback-banner hidden"></div>
+
+                    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:12px;">
+                        <button type="button" class="btn-save-dossier" id="btn-save-dossier-changes">
+                            <span>💾</span> SAVE CHANGES
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION B: 5-SECTOR PERFORMANCE MATRIX -->
+            <div class="dossier-section">
+                <div class="dossier-sec-header">
+                    <span class="sec-dot"></span>
+                    <h3 class="sec-heading">5-SECTOR COMBAT PERFORMANCE MATRIX</h3>
+                    <div id="compare-legend" class="compare-legend hidden">
+                        <span class="legend-chip lead">▲ YOU LEAD</span>
+                        <span class="legend-chip trail">▼ THEY LEAD</span>
+                    </div>
+                </div>
+
+                <div class="performance-matrix-grid" id="dossier-performance-grid">
+                    <!-- Generated via JS for all 5 sectors -->
+                </div>
+            </div>
+
+            <!-- SECTION C: LIFETIME TELEMETRY & MEDALS -->
+            <div class="dossier-section">
+                <div class="dossier-sec-header">
+                    <span class="sec-dot"></span>
+                    <h3 class="sec-heading">LIFETIME TELEMETRY & CYBER MEDALS</h3>
+                </div>
+
+                <!-- 3 Quick Stat Counters -->
+                <div class="telemetry-stats-row">
+                    <div class="telemetry-card">
+                        <span class="telemetry-val" id="dossier-stat-games">0</span>
+                        <span class="telemetry-lbl">TOTAL GAMES PLAYED</span>
+                    </div>
+                    <div class="telemetry-card">
+                        <span class="telemetry-val" id="dossier-stat-top10">0</span>
+                        <span class="telemetry-lbl">GLOBAL TOP-10 FINISHES</span>
+                    </div>
+                    <div class="telemetry-card">
+                        <span class="telemetry-val" id="dossier-stat-party-wins">0</span>
+                        <span class="telemetry-lbl">PARTY LOBBY WINS</span>
+                    </div>
+                </div>
+
+                <!-- Unlockable Cyber Medals -->
+                <div class="medals-container" id="dossier-medals-container">
+                    <!-- Generated by JS with locked/unlocked state & tooltip -->
+                </div>
+            </div>
+
+            <!-- SECTION D: CONTEXT-AWARE FOOTER ACTIONS -->
+            <div class="dossier-footer-actions">
+                <!-- Own Profile Actions -->
+                <div class="footer-group own-profile-group" id="dossier-own-actions">
+                    <button type="button" class="btn-dossier-action btn-toggle-edit" id="btn-toggle-edit-drawer">
+                        <span>⚙️</span> EDIT AVATAR & SECTOR
+                    </button>
+                    <button type="button" class="btn-dossier-action btn-copy-card" id="btn-copy-profile-card">
+                        <span>📋</span> COPY PROFILE CARD
+                    </button>
+                    <button type="button" class="btn-dossier-action btn-dossier-logout" id="btn-dossier-logout" title="Sign out of active account">
+                        <span>⏻</span> LOGOUT OF PROFILE
+                    </button>
+                </div>
+
+                <!-- Another Pilot Profile Actions -->
+                <div class="footer-group other-profile-group hidden" id="dossier-other-actions">
+                    <button type="button" class="btn-dossier-action btn-challenge-party" id="btn-challenge-party">
+                        <span>⚔️</span> CHALLENGE TO PARTY
+                    </button>
+                    <button type="button" class="btn-dossier-action btn-compare-records" id="btn-compare-records">
+                        <span>📊</span> COMPARE RECORDS
+                    </button>
+                    <button type="button" class="btn-dossier-action btn-back-my-profile" id="btn-back-my-profile">
+                        <span>👤</span> VIEW MY PROFILE
+                    </button>
                 </div>
             </div>
         </div>

@@ -71,6 +71,16 @@ db.exec(`
     CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
 `);
 
+// Safe Migrations for Profile fields (Avatar, Bio, Email, Sector, Medals)
+try { db.exec(`ALTER TABLE users ADD COLUMN avatar_id INTEGER DEFAULT 1;`); } catch(e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT '';`); } catch(e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN bio TEXT DEFAULT '';`); } catch(e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN email TEXT DEFAULT '';`); } catch(e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN primary_sector TEXT DEFAULT 'AIM MATRIX';`); } catch(e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN total_games INTEGER DEFAULT 0;`); } catch(e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN party_wins INTEGER DEFAULT 0;`); } catch(e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN unlocked_medals TEXT DEFAULT '[]';`); } catch(e) {}
+
 // ==============================================================
 // CRYPTOGRAPHIC UTILITIES
 // ==============================================================
@@ -180,10 +190,35 @@ seedDatabaseIfEmpty();
 // Periodic snapshot export to JSON for git tracking and backup
 function exportJSONSnapshots() {
     try {
-        const usersList = db.prepare('SELECT username, sector, role, created_at FROM users').all();
+        const usersList = db.prepare(`
+            SELECT username, sector, role,
+                   COALESCE(avatar_id, 1) as avatar_id,
+                   COALESCE(avatar, '') as avatar,
+                   COALESCE(bio, '') as bio,
+                   COALESCE(email, '') as email,
+                   COALESCE(primary_sector, sector, 'AIM MATRIX') as primary_sector,
+                   COALESCE(total_games, 0) as total_games,
+                   COALESCE(party_wins, 0) as party_wins,
+                   COALESCE(unlocked_medals, '[]') as unlocked_medals,
+                   created_at
+            FROM users
+        `).all();
         const usersObj = {};
         usersList.forEach(u => {
-            usersObj[u.username] = { username: u.username, sector: u.sector, role: u.role, createdAt: u.created_at };
+            usersObj[u.username] = {
+                username: u.username,
+                sector: u.primary_sector,
+                primary_sector: u.primary_sector,
+                role: u.role,
+                avatar_id: u.avatar_id,
+                avatar: u.avatar,
+                bio: u.bio,
+                email: u.email,
+                total_games: u.total_games,
+                party_wins: u.party_wins,
+                unlocked_medals: u.unlocked_medals,
+                createdAt: u.created_at
+            };
         });
         fs.writeFileSync(USERS_FILE, JSON.stringify(usersObj, null, 2));
 
@@ -194,10 +229,13 @@ function exportJSONSnapshots() {
             const order = isReflex ? 'ASC' : 'DESC';
             const func = isReflex ? 'MIN' : 'MAX';
             const rows = db.prepare(`
-                SELECT username, ${func}(score) as score, MAX(date) as date, verified
-                FROM scores
-                WHERE game_id = ?
-                GROUP BY username
+                SELECT s.username, ${func}(s.score) as score, MAX(s.date) as date, s.verified,
+                       COALESCE(u.avatar, '') as avatar,
+                       COALESCE(u.avatar_id, 1) as avatar_id
+                FROM scores s
+                LEFT JOIN users u ON (s.user_id = u.id OR UPPER(s.username) = UPPER(u.username))
+                WHERE s.game_id = ?
+                GROUP BY s.username
                 ORDER BY score ${order}
                 LIMIT 50
             `).all(g);
@@ -205,6 +243,8 @@ function exportJSONSnapshots() {
             lbObj[g] = rows.map(r => ({
                 username: r.username,
                 score: r.score,
+                avatar: r.avatar || '',
+                avatar_id: r.avatar_id || 1,
                 date: r.date,
                 verified: Boolean(r.verified),
                 title: r.username === 'BHAGATH_KRISHNA' ? 'ARCADE ARCHITECT' : undefined
@@ -234,7 +274,16 @@ function getSessionUser(req) {
     if (!token) return null;
 
     const session = db.prepare(`
-        SELECT s.token, s.last_active, u.id, u.username, u.sector, u.role
+        SELECT s.token, s.last_active, u.id, u.username, u.sector, u.role,
+               COALESCE(u.avatar_id, 1) as avatar_id,
+               COALESCE(u.avatar, '') as avatar,
+               COALESCE(u.bio, '') as bio,
+               COALESCE(u.email, '') as email,
+               COALESCE(u.primary_sector, u.sector, 'AIM MATRIX') as primary_sector,
+               COALESCE(u.total_games, 0) as total_games,
+               COALESCE(u.party_wins, 0) as party_wins,
+               COALESCE(u.unlocked_medals, '[]') as unlocked_medals,
+               u.created_at
         FROM sessions s
         JOIN users u ON s.user_id = u.id
         WHERE s.token = ?
@@ -248,8 +297,17 @@ function getSessionUser(req) {
     return {
         id: session.id,
         username: session.username,
-        sector: session.sector,
-        role: session.role,
+        sector: session.primary_sector || session.sector || 'AIM MATRIX',
+        primary_sector: session.primary_sector || session.sector || 'AIM MATRIX',
+        role: session.role || 'PILOT',
+        avatar_id: session.avatar_id || 1,
+        avatar: session.avatar || '',
+        bio: session.bio || '',
+        email: session.email || '',
+        total_games: session.total_games || 0,
+        party_wins: session.party_wins || 0,
+        unlocked_medals: session.unlocked_medals || '[]',
+        createdAt: session.created_at,
         token: session.token
     };
 }
@@ -296,6 +354,277 @@ const MIME_TYPES = {
     '.svg': 'image/svg+xml',
     '.ico': 'image/x-icon'
 };
+
+// ==============================================================
+// PILOT DOSSIER & MEDAL TELEMETRY SYSTEM
+// ==============================================================
+const ARCADE_SECTORS = [
+    { id: 'aim-matrix', name: 'Aim Matrix', unit: 'PTS', isReflex: false, icon: '🎯' },
+    { id: 'neon-dash', name: 'Neon Dash', unit: 'm', isReflex: false, icon: '🚀' },
+    { id: 'flash-reflex', name: 'Flash Reflex', unit: 'MS', isReflex: true, icon: '⚡' },
+    { id: 'cyber-slicer', name: 'Cyber Slicer', unit: 'PTS', isReflex: false, icon: '⚔️' },
+    { id: 'pulse-deflector', name: 'Pulse Deflector', unit: 'PTS', isReflex: false, icon: '🛡️' }
+];
+
+const MEDAL_CATALOG = [
+    {
+        id: 'sub_150ms_reflex',
+        name: 'Sub-150ms Reflex',
+        icon: '⚡',
+        rarity: 'MYTHIC',
+        desc: 'Log a verified latency under 150ms in Sector 03 (Flash Reflex).'
+    },
+    {
+        id: 'neon_1000m',
+        name: '1000m Neon Runner',
+        icon: '🚀',
+        rarity: 'LEGENDARY',
+        desc: 'Sprint over 1,000 meters in Sector 02 (Neon Dash).'
+    },
+    {
+        id: 'aim_master_1000',
+        name: 'Aim Matrix Grandmaster',
+        icon: '🎯',
+        rarity: 'EPIC',
+        desc: 'Achieve 1,000+ points in Sector 01 (Aim Matrix).'
+    },
+    {
+        id: 'slicer_frenzy_500',
+        name: 'Kinetic Slicer',
+        icon: '⚔️',
+        rarity: 'RARE',
+        desc: 'Slice combo target score of 500+ points in Sector 04 (Cyber Slicer).'
+    },
+    {
+        id: 'pulse_titan_500',
+        name: 'Pulse Bastion',
+        icon: '🛡️',
+        rarity: 'RARE',
+        desc: 'Withstand orbital onslaught to reach 500+ points in Sector 05 (Pulse Deflector).'
+    },
+    {
+        id: 'sector_veteran',
+        name: '5-Sector Veteran',
+        icon: '🌟',
+        rarity: 'EPIC',
+        desc: 'Submit verified combat records across all 5 tactical arcade sectors.'
+    },
+    {
+        id: 'top_10_legend',
+        name: 'Matrix Top-10',
+        icon: '👑',
+        rarity: 'MYTHIC',
+        desc: 'Claim and hold a Top-10 global leaderboard ranking.'
+    }
+];
+
+function checkAndUnlockMedals(user) {
+    if (!user || !user.id) return { medals: [], newlyUnlocked: [] };
+
+    let currentMedals = [];
+    try {
+        currentMedals = JSON.parse(user.unlocked_medals || '[]');
+    } catch(e) {
+        currentMedals = [];
+    }
+
+    const newlyUnlocked = [];
+    const unlock = (id) => {
+        if (!currentMedals.includes(id)) {
+            currentMedals.push(id);
+            newlyUnlocked.push(id);
+        }
+    };
+
+    const bestScores = db.prepare(`
+        SELECT game_id, MIN(score) as minScore, MAX(score) as maxScore
+        FROM scores
+        WHERE user_id = ? OR UPPER(username) = UPPER(?)
+        GROUP BY game_id
+    `).all(user.id, user.username);
+
+    const scoreMap = {};
+    bestScores.forEach(b => {
+        scoreMap[b.game_id] = { min: b.minScore, max: b.maxScore };
+    });
+
+    if (scoreMap['flash-reflex'] && scoreMap['flash-reflex'].min > 0 && scoreMap['flash-reflex'].min <= 150) {
+        unlock('sub_150ms_reflex');
+    }
+    if (scoreMap['neon-dash'] && scoreMap['neon-dash'].max >= 1000) {
+        unlock('neon_1000m');
+    }
+    if (scoreMap['aim-matrix'] && scoreMap['aim-matrix'].max >= 1000) {
+        unlock('aim_master_1000');
+    }
+    if (scoreMap['cyber-slicer'] && scoreMap['cyber-slicer'].max >= 500) {
+        unlock('slicer_frenzy_500');
+    }
+    if (scoreMap['pulse-deflector'] && scoreMap['pulse-deflector'].max >= 500) {
+        unlock('pulse_titan_500');
+    }
+    if (bestScores.length >= 5) {
+        unlock('sector_veteran');
+    }
+
+    if (newlyUnlocked.length > 0) {
+        db.prepare('UPDATE users SET unlocked_medals = ? WHERE id = ?').run(JSON.stringify(currentMedals), user.id);
+        exportJSONSnapshots();
+    }
+
+    return { medals: currentMedals, newlyUnlocked };
+}
+
+function getPilotDossier(targetCallsign, activeUser = null) {
+    const clean = (targetCallsign || '').trim().toUpperCase();
+    if (!clean) return null;
+
+    const pilot = db.prepare(`
+        SELECT id, username, role,
+               COALESCE(avatar_id, 1) as avatar_id,
+               COALESCE(avatar, '') as avatar,
+               COALESCE(bio, '') as bio,
+               COALESCE(email, '') as email,
+               COALESCE(primary_sector, sector, 'AIM MATRIX') as primary_sector,
+               COALESCE(total_games, 0) as total_games,
+               COALESCE(party_wins, 0) as party_wins,
+               COALESCE(unlocked_medals, '[]') as unlocked_medals,
+               created_at
+        FROM users
+        WHERE UPPER(username) = ?
+    `).get(clean);
+
+    if (!pilot) return null;
+
+    // Run medal check
+    const { medals } = checkAndUnlockMedals(pilot);
+
+    // Compute Performance Matrix across 5 sectors
+    let top10Count = 0;
+    let anyRank1 = false;
+    let anyTop3 = false;
+    let anyTop10 = false;
+
+    const performanceMatrix = ARCADE_SECTORS.map(sec => {
+        const order = sec.isReflex ? 'ASC' : 'DESC';
+        const func = sec.isReflex ? 'MIN' : 'MAX';
+
+        const ranked = db.prepare(`
+            SELECT username, ${func}(score) as best
+            FROM scores
+            WHERE game_id = ?
+            GROUP BY username
+            ORDER BY best ${order}
+        `).all(sec.id);
+
+        let rank = null;
+        let best = null;
+        ranked.forEach((r, idx) => {
+            if (r.username.toUpperCase() === clean) {
+                rank = idx + 1;
+                best = r.best;
+            }
+        });
+
+        if (rank !== null && rank <= 10) {
+            top10Count++;
+            anyTop10 = true;
+            if (rank === 1) anyRank1 = true;
+            if (rank <= 3) anyTop3 = true;
+        }
+
+        return {
+            id: sec.id,
+            name: sec.name,
+            unit: sec.unit,
+            icon: sec.icon,
+            bestScore: best,
+            rank,
+            totalPilots: ranked.length
+        };
+    });
+
+    if (anyTop10 && !medals.includes('top_10_legend')) {
+        medals.push('top_10_legend');
+        db.prepare('UPDATE users SET unlocked_medals = ? WHERE id = ?').run(JSON.stringify(medals), pilot.id);
+    }
+
+    // Determine Clearance Title
+    let clearanceTitle = 'Cadet';
+    if (pilot.username === 'BHAGATH_KRISHNA') {
+        clearanceTitle = 'Arcade Architect';
+    } else if (anyRank1 || pilot.total_games >= 30) {
+        clearanceTitle = 'Cyber Legend';
+    } else if (anyTop3 || pilot.total_games >= 15) {
+        clearanceTitle = 'Synaptic Ace';
+    } else if (anyTop10 || pilot.total_games >= 5) {
+        clearanceTitle = 'Grid Runner';
+    }
+
+    const isOwn = activeUser && activeUser.username.toUpperCase() === clean;
+
+    // Active user's best scores for comparison (if viewing another pilot's dossier)
+    let comparison = null;
+    if (activeUser && !isOwn) {
+        comparison = {};
+        ARCADE_SECTORS.forEach(sec => {
+            const func = sec.isReflex ? 'MIN' : 'MAX';
+            const myBestRow = db.prepare(`
+                SELECT ${func}(score) as best
+                FROM scores
+                WHERE game_id = ? AND (user_id = ? OR UPPER(username) = UPPER(?))
+            `).get(sec.id, activeUser.id, activeUser.username);
+
+            const targetSec = performanceMatrix.find(p => p.id === sec.id);
+            const myScore = myBestRow ? myBestRow.best : null;
+            const targetScore = targetSec ? targetSec.bestScore : null;
+
+            let diff = null;
+            let status = 'TIE';
+            if (myScore !== null && targetScore !== null) {
+                if (sec.isReflex) {
+                    diff = targetScore - myScore; // In reflex, lower is better. If myScore < targetScore, diff > 0 -> I am faster
+                    status = myScore < targetScore ? 'YOU_LEAD' : (myScore > targetScore ? 'THEY_LEAD' : 'TIED');
+                } else {
+                    diff = myScore - targetScore;
+                    status = myScore > targetScore ? 'YOU_LEAD' : (myScore < targetScore ? 'THEY_LEAD' : 'TIED');
+                }
+            } else if (myScore !== null) {
+                status = 'YOU_LEAD';
+            } else if (targetScore !== null) {
+                status = 'THEY_LEAD';
+            }
+
+            comparison[sec.id] = { myScore, targetScore, diff, status };
+        });
+    }
+
+    const uid = `#KURA-${String(pilot.id).padStart(4, '0')}`;
+    const isGoogle = Boolean(pilot.email && pilot.email.endsWith('@gmail.com'));
+
+    return {
+        id: pilot.id,
+        uid,
+        username: pilot.username,
+        role: pilot.role,
+        title: clearanceTitle,
+        avatar_id: pilot.avatar_id,
+        avatar: pilot.avatar,
+        bio: pilot.bio,
+        primary_sector: pilot.primary_sector,
+        email: isOwn ? pilot.email : undefined,
+        isGoogle,
+        enlistedAt: pilot.created_at,
+        totalGames: pilot.total_games,
+        partyWins: pilot.party_wins,
+        top10Finishes: top10Count,
+        unlockedMedals: medals,
+        medalCatalog: MEDAL_CATALOG,
+        performanceMatrix,
+        comparison,
+        isOwn: Boolean(isOwn)
+    };
+}
 
 // ==============================================================
 // HTTP SERVER & ROUTING
@@ -479,11 +808,119 @@ const server = http.createServer(async (req, res) => {
         if (!user) {
             return sendJSON(res, 401, { success: false, error: 'Not authenticated' });
         }
-        return sendJSON(res, 200, { success: true, user });
+        // Fetch pilot stats across arcade
+        const stats = db.prepare(`
+            SELECT COUNT(*) as gamesPlayed, COALESCE(MAX(score), 0) as maxScore
+            FROM scores
+            WHERE user_id = ? OR UPPER(username) = UPPER(?)
+        `).get(user.id, user.username);
+
+        return sendJSON(res, 200, {
+            success: true,
+            user: {
+                ...user,
+                gamesPlayed: stats ? stats.gamesPlayed : 0,
+                maxScore: stats ? stats.maxScore : 0
+            }
+        });
     }
 
     // -------------------------------------------------------------
-    // API: SUBMIT SCORE (AUTOMATIC DATABASE SAVE)
+    // API: GET PILOT PROFILE // DOSSIER (/api/profile/:callsign or /api/profile?callsign=...)
+    // -------------------------------------------------------------
+    if ((pathname.startsWith('/api/profile/') || pathname === '/api/profile') && req.method === 'GET') {
+        const activeUser = getSessionUser(req);
+        let targetCallsign = '';
+        if (pathname.startsWith('/api/profile/')) {
+            targetCallsign = decodeURIComponent(pathname.slice('/api/profile/'.length)).trim();
+        } else {
+            targetCallsign = (url.searchParams.get('callsign') || url.searchParams.get('username') || (activeUser ? activeUser.username : '')).trim();
+        }
+
+        if (!targetCallsign) {
+            return sendJSON(res, 400, { success: false, error: 'Target callsign is required.' });
+        }
+
+        const dossier = getPilotDossier(targetCallsign, activeUser);
+        if (!dossier) {
+            return sendJSON(res, 404, { success: false, error: `Pilot dossier [${targetCallsign}] not found in archive.` });
+        }
+
+        return sendJSON(res, 200, { success: true, profile: dossier });
+    }
+
+    // -------------------------------------------------------------
+    // API: UPDATE PROFILE (/api/profile/update or /api/profile)
+    // -------------------------------------------------------------
+    if ((pathname === '/api/profile/update' || pathname === '/api/profile') && (req.method === 'POST' || req.method === 'PUT')) {
+        const user = getSessionUser(req);
+        if (!user) {
+            return sendJSON(res, 401, { success: false, error: 'Unauthorized: Pilot login required.' });
+        }
+
+        const body = await parseBody(req);
+        let { avatar_id, avatar, bio, primary_sector, sector, email } = body;
+
+        let cleanAvatarId = user.avatar_id || 1;
+        if (avatar_id !== undefined) {
+            cleanAvatarId = parseInt(avatar_id, 10);
+            if (isNaN(cleanAvatarId) || cleanAvatarId < 1 || cleanAvatarId > 6) cleanAvatarId = 1;
+        }
+
+        let cleanAvatar = user.avatar || '';
+        if (avatar !== undefined) {
+            if (typeof avatar === 'string' && avatar.length > 300000) {
+                return sendJSON(res, 400, { success: false, error: 'Avatar image is too large. Max 250KB.' });
+            }
+            cleanAvatar = avatar;
+        }
+
+        let cleanBio = user.bio || '';
+        if (bio !== undefined) {
+            cleanBio = String(bio).trim().slice(0, 300);
+        }
+
+        let cleanSector = user.primary_sector || user.sector || 'AIM MATRIX';
+        const targetSec = primary_sector || sector;
+        if (targetSec !== undefined) {
+            cleanSector = String(targetSec).trim().slice(0, 40);
+        }
+
+        let cleanEmail = user.email || '';
+        if (email !== undefined) {
+            cleanEmail = String(email).trim().slice(0, 100);
+        }
+
+        db.prepare(`
+            UPDATE users
+            SET avatar_id = ?, avatar = ?, bio = ?, primary_sector = ?, sector = ?, email = ?
+            WHERE id = ?
+        `).run(cleanAvatarId, cleanAvatar, cleanBio, cleanSector, cleanSector, cleanEmail, user.id);
+
+        exportJSONSnapshots();
+
+        const updatedDossier = getPilotDossier(user.username, user);
+
+        return sendJSON(res, 200, {
+            success: true,
+            message: 'Pilot profile updated successfully.',
+            user: {
+                id: user.id,
+                username: user.username,
+                avatar_id: cleanAvatarId,
+                avatar: cleanAvatar,
+                bio: cleanBio,
+                primary_sector: cleanSector,
+                sector: cleanSector,
+                email: cleanEmail,
+                role: user.role
+            },
+            profile: updatedDossier
+        });
+    }
+
+    // -------------------------------------------------------------
+    // API: SUBMIT SCORE (AUTOMATIC DATABASE SAVE & MEDAL EVALUATION)
     // -------------------------------------------------------------
     if (pathname === '/api/score' && req.method === 'POST') {
         let user = getSessionUser(req);
@@ -492,7 +929,7 @@ const server = http.createServer(async (req, res) => {
         // Allow fallback user name if valid user exists in DB
         if (!user && fallbackName) {
             const clean = fallbackName.trim().toUpperCase();
-            const u = db.prepare('SELECT id, username, sector, role FROM users WHERE username = ?').get(clean);
+            const u = db.prepare('SELECT id, username, sector, role, avatar_id, avatar, unlocked_medals FROM users WHERE username = ?').get(clean);
             if (u) user = u;
         }
 
@@ -512,6 +949,16 @@ const server = http.createServer(async (req, res) => {
             INSERT INTO scores (user_id, username, game_id, score, date, verified, created_at)
             VALUES (?, ?, ?, ?, ?, 1, ?)
         `).run(user.id, user.username, gameId, scoreVal, dateStr, Date.now());
+
+        // Increment total games
+        db.prepare(`
+            UPDATE users
+            SET total_games = COALESCE(total_games, 0) + 1
+            WHERE id = ?
+        `).run(user.id);
+
+        // Check and unlock medals
+        const { medals, newlyUnlocked } = checkAndUnlockMedals(user);
 
         exportJSONSnapshots();
 
@@ -544,6 +991,7 @@ const server = http.createServer(async (req, res) => {
             userRank,
             userBestScore,
             totalPilots,
+            newlyUnlockedMedals: newlyUnlocked,
             message: `Score recorded for pilot [${user.username}] in Sector ${gameId}.`
         });
     }
@@ -562,15 +1010,19 @@ const server = http.createServer(async (req, res) => {
 
         // 1. Get ALL unique ranked pilots to compute exact overall rank
         const allRanked = db.prepare(`
-            SELECT username, ${func}(score) as score, MAX(date) as date, verified
-            FROM scores
-            WHERE game_id = ?
-            GROUP BY username
+            SELECT s.username, ${func}(s.score) as score, MAX(s.date) as date, s.verified,
+                   COALESCE(u.avatar, '') as avatar, COALESCE(u.bio, '') as bio, COALESCE(u.role, 'PILOT') as role
+            FROM scores s
+            LEFT JOIN users u ON (s.user_id = u.id OR UPPER(s.username) = UPPER(u.username))
+            WHERE s.game_id = ?
+            GROUP BY s.username
             ORDER BY score ${order}
         `).all(gameId);
 
         let userRank = null;
         let userBestScore = null;
+        let userAvatar = '';
+        let userBio = '';
         const totalPilots = allRanked.length;
 
         allRanked.forEach((p, idx) => {
@@ -578,6 +1030,8 @@ const server = http.createServer(async (req, res) => {
             if (targetUser && p.username.toUpperCase() === targetUser) {
                 userRank = idx + 1;
                 userBestScore = p.score;
+                userAvatar = p.avatar || '';
+                userBio = p.bio || '';
             }
         });
 
@@ -590,6 +1044,8 @@ const server = http.createServer(async (req, res) => {
         const scores = filtered.slice(0, 50).map(r => ({
             rank: r.rank,
             username: r.username,
+            avatar: r.avatar || '',
+            bio: r.bio || '',
             score: r.score,
             date: r.date,
             verified: Boolean(r.verified),
@@ -601,6 +1057,8 @@ const server = http.createServer(async (req, res) => {
             scores,
             userRank,
             userBestScore,
+            userAvatar,
+            userBio,
             totalPilots
         });
     }
