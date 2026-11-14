@@ -25,21 +25,21 @@ const firebaseConfig = {
 // Initialize Firebase App
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firebase Analytics (conditionally if supported by browser)
+// Initialize Firebase Analytics (gracefully safe if blocked by ad-blockers)
 let analytics = null;
-isSupported().then((supported) => {
-  if (supported) {
-    analytics = getAnalytics(app);
-    try {
-      logEvent(analytics, 'app_initialized', {
-        app_name: 'KURA Cyber-Arcade',
-        timestamp: Date.now()
-      });
-    } catch (e) {}
-  }
-}).catch((err) => {
-  console.warn('[Kura Firebase] Analytics initialization deferred:', err.message);
-});
+try {
+  isSupported().then((supported) => {
+    if (supported) {
+      try {
+        analytics = getAnalytics(app);
+        logEvent(analytics, 'app_initialized', {
+          app_name: 'KURA Cyber-Arcade',
+          timestamp: Date.now()
+        });
+      } catch (e) {}
+    }
+  }).catch(() => {});
+} catch (e) {}
 
 // Initialize Firebase Auth & Google Auth Provider
 const auth = getAuth(app);
@@ -48,8 +48,48 @@ googleProvider.setCustomParameters({
   prompt: 'select_account'
 });
 
+// Helper: Verify whether Google Auth provider has been enabled in Firebase Console
+let googleProviderConfigured = null;
+async function verifyGoogleProvider() {
+  if (googleProviderConfigured !== null) return googleProviderConfigured;
+  try {
+    const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:createAuthUri?key=${firebaseConfig.apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        providerId: 'google.com',
+        continueUri: window.location.origin
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (data.error && data.error.message === 'CONFIGURATION_NOT_FOUND') {
+      googleProviderConfigured = false;
+      return false;
+    }
+    googleProviderConfigured = true;
+    return true;
+  } catch (e) {
+    return true;
+  }
+}
+
+// Kick off background check immediately
+verifyGoogleProvider().catch(() => {});
+
 // Helper: Real Firebase Google Sign-In with Popup
 async function signInWithGoogle() {
+  // Proactively check if Firebase Console setup is pending
+  const isConfigured = await verifyGoogleProvider();
+  if (isConfigured === false) {
+    return {
+      success: false,
+      code: 'auth/configuration-not-found',
+      message: 'Google Sign-In is not activated yet in the Firebase Console.',
+      needsConsoleSetup: true,
+      consoleUrl: 'https://console.firebase.google.com/project/kura-play/authentication/providers'
+    };
+  }
+
   try {
     const result = await signInWithPopup(auth, googleProvider);
     const user = result.user;
@@ -67,6 +107,19 @@ async function signInWithGoogle() {
     };
   } catch (error) {
     console.warn('[Kura Firebase] Google Auth Error or Cancelled:', error.code || error.message);
+    
+    // Check if failure is due to unconfigured Google Provider
+    const isStillConfigured = await verifyGoogleProvider();
+    if (isStillConfigured === false || error.code === 'auth/configuration-not-found') {
+      return {
+        success: false,
+        code: 'auth/configuration-not-found',
+        message: 'Google Sign-In is not activated yet in the Firebase Console.',
+        needsConsoleSetup: true,
+        consoleUrl: 'https://console.firebase.google.com/project/kura-play/authentication/providers'
+      };
+    }
+
     let friendlyMessage = 'Google authentication failed.';
     if (error.code === 'auth/popup-closed-by-user') {
       friendlyMessage = 'Google Sign-In popup was closed before completing.';
@@ -74,9 +127,18 @@ async function signInWithGoogle() {
       friendlyMessage = 'Popup was blocked by your browser. Please allow popups for this site.';
     } else if (error.code === 'auth/cancelled-popup-request') {
       friendlyMessage = 'Sign-in cancelled due to multiple open popups.';
+    } else if (error.code === 'auth/unauthorized-domain') {
+      return {
+        success: false,
+        code: 'auth/unauthorized-domain',
+        message: 'Domain not authorized in Firebase Console.',
+        needsConsoleSetup: true,
+        consoleUrl: 'https://console.firebase.google.com/project/kura-play/authentication/settings'
+      };
     } else if (error.message) {
       friendlyMessage = error.message;
     }
+
     return {
       success: false,
       code: error.code,
@@ -125,6 +187,7 @@ window.KuraFirebase = {
   signOutUser,
   signOut: signOutUser,
   onAuthStateChanged: subscribeAuthState,
+  verifyGoogleProvider,
   trackEvent,
   config: firebaseConfig,
   isReady: true

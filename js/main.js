@@ -953,6 +953,56 @@ class ArcadeHub {
                 const authResult = await window.KuraFirebase.signInWithGoogle();
 
                 if (!authResult.success) {
+                    if (authResult.needsConsoleSetup || authResult.code === 'auth/configuration-not-found') {
+                        const consoleHtml = `
+                            <div class="firebase-error-card">
+                                <div class="fb-error-header" style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #fff;">
+                                    <span class="led-status" style="background: #ff2e55; box-shadow: 0 0 8px #ff2e55;"></span>
+                                    <span>FIREBASE CONSOLE SETUP REQUIRED</span>
+                                </div>
+                                <div class="fb-error-desc" style="font-size: 0.78rem; line-height: 1.4; color: #ff8fa3; margin: 4px 0;">
+                                    Google Sign-In is not activated yet in your Firebase Project (<strong>kura-play</strong>).
+                                </div>
+                                <div class="fb-error-steps" style="display: flex; flex-direction: column; gap: 4px; background: rgba(0,0,0,0.4); padding: 8px 10px; border-radius: 4px; border-left: 2px solid #ff2e55; font-size: 11px;">
+                                    <div><strong>1.</strong> Open <a href="https://console.firebase.google.com/project/kura-play/authentication/providers" target="_blank" rel="noopener noreferrer" style="color: #00f3ff; text-decoration: underline;">Firebase Console ➔ Authentication</a></div>
+                                    <div><strong>2.</strong> In <strong>Sign-in method</strong>, click <strong>Google</strong> ➔ toggle <strong>Enable</strong> ➔ Save</div>
+                                    <div><strong>3.</strong> In <strong>Settings &gt; Authorized domains</strong>, verify <code>localhost</code> and <code>kura-play.vercel.app</code></div>
+                                </div>
+                                <div class="fb-fallback-box" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 11px; color: #ccc;">
+                                    <div style="margin-bottom: 6px;">Want to play immediately? Use Callsign login or click below:</div>
+                                    <button type="button" id="btn-quick-gate-enlist" class="gate-btn-submit" style="padding: 8px 12px; font-size: 0.78rem; background: linear-gradient(135deg, #00f3ff, #ff0077); border: none; cursor: pointer; border-radius: 4px; color: #fff; font-weight: bold;">
+                                        ⚡ QUICK PILOT DEMO ACCESS (VIPER_01) ➔
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        if (this.gateError) {
+                            this.gateError.innerHTML = consoleHtml;
+                            this.gateError.classList.remove('hidden');
+                            const quickBtn = document.getElementById('btn-quick-gate-enlist');
+                            if (quickBtn) {
+                                quickBtn.addEventListener('click', async () => {
+                                    const u = 'VIPER_01';
+                                    const p = 'kura2026';
+                                    let res = await window.KuraServer.login(u, p);
+                                    if (!res.success) {
+                                        res = await window.KuraServer.register(u, p, 'AIM MATRIX');
+                                    }
+                                    if (res.success) {
+                                        if (window.KuraSounds) window.KuraSounds.synthAccessGrantedSlam();
+                                        this.hideAuthGate();
+                                        this.updateAuthUI();
+                                    }
+                                });
+                            }
+                        }
+                        if (errorBanner) {
+                            errorBanner.innerHTML = consoleHtml;
+                            errorBanner.classList.remove('hidden');
+                        }
+                        return;
+                    }
+
                     const failMsg = authResult.message || 'Google authentication was cancelled or failed.';
                     if (this.gateError) {
                         this.gateError.textContent = failMsg;
