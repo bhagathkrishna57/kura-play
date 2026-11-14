@@ -285,12 +285,46 @@ class ArcadeHub {
         }
 
         const btnJoinRoom = document.getElementById('btn-join-room');
+        const joinInput = document.getElementById('join-room-input');
         if (btnJoinRoom) {
             btnJoinRoom.addEventListener('click', () => {
-                const input = document.getElementById('join-room-input');
-                if (input && input.value) {
+                if (joinInput && joinInput.value) {
                     if (window.KuraSounds) window.KuraSounds.playClick();
-                    this.joinPartyRoom(input.value);
+                    this.joinPartyRoom(joinInput.value);
+                }
+            });
+        }
+
+        // Support pressing Enter inside the room code input
+        if (joinInput) {
+            joinInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (btnJoinRoom) btnJoinRoom.click();
+                }
+            });
+        }
+
+        // 1-Click Paste button from Clipboard
+        const btnPasteRoom = document.getElementById('btn-paste-room');
+        if (btnPasteRoom) {
+            btnPasteRoom.addEventListener('click', async () => {
+                try {
+                    const text = await navigator.clipboard.readText();
+                    if (joinInput && text) {
+                        // Extract room code if a full URL was pasted (e.g. ?room=KURA-123)
+                        const match = text.match(/(KURA-\d+)/i);
+                        joinInput.value = match ? match[1].toUpperCase() : text.trim().toUpperCase();
+                        if (window.KuraSounds) window.KuraSounds.playClick();
+                        btnPasteRoom.textContent = '✓ PASTED!';
+                        setTimeout(() => { btnPasteRoom.textContent = '📋 PASTE'; }, 1500);
+                    }
+                } catch (err) {
+                    // Fallback focus to input for manual Ctrl+V
+                    if (joinInput) {
+                        joinInput.focus();
+                        joinInput.select();
+                    }
                 }
             });
         }
