@@ -35,6 +35,7 @@ class ArcadeHub {
         window.addEventListener('orientationchange', () => {
             setTimeout(() => this.resizeActiveCanvas(), 150);
         });
+        this.initMobileNav();
         this.initMandatoryGate();
         this.initPilotAuth();
     }
@@ -43,6 +44,68 @@ class ArcadeHub {
         if (!this.activeCanvas) return;
         this.activeCanvas.width = window.innerWidth;
         this.activeCanvas.height = window.innerHeight;
+        if (this.currentGame && typeof this.currentGame.handleResize === 'function') {
+            this.currentGame.handleResize(this.activeCanvas.width, this.activeCanvas.height);
+        }
+    }
+
+    initMobileNav() {
+        this.mobileDrawer = document.getElementById('mobile-nav-drawer');
+        const menuToggle = document.getElementById('mobile-menu-toggle');
+        const menuClose = document.getElementById('mobile-nav-close');
+
+        const toggleDrawer = (open) => {
+            if (!this.mobileDrawer) return;
+            const shouldOpen = open !== undefined ? open : !this.mobileDrawer.classList.contains('active');
+            if (shouldOpen) {
+                this.mobileDrawer.classList.add('active');
+            } else {
+                this.mobileDrawer.classList.remove('active');
+            }
+            if (window.KuraSounds) window.KuraSounds.playClick();
+        };
+
+        if (menuToggle) menuToggle.addEventListener('click', () => toggleDrawer());
+        if (menuClose) menuClose.addEventListener('click', () => toggleDrawer(false));
+
+        // Close drawer when clicking outside content
+        if (this.mobileDrawer) {
+            this.mobileDrawer.addEventListener('click', (e) => {
+                if (e.target === this.mobileDrawer) toggleDrawer(false);
+            });
+        }
+
+        const mobileLb = document.getElementById('mobile-lb-btn');
+        if (mobileLb) {
+            mobileLb.addEventListener('click', () => {
+                toggleDrawer(false);
+                this.openLeaderboardModal();
+            });
+        }
+
+        const mobileParty = document.getElementById('mobile-party-btn');
+        if (mobileParty) {
+            mobileParty.addEventListener('click', () => {
+                toggleDrawer(false);
+                this.openPartyModal();
+            });
+        }
+
+        const mobileSkip = document.getElementById('mobile-skip-btn');
+        if (mobileSkip) {
+            mobileSkip.addEventListener('click', () => {
+                toggleDrawer(false);
+                this.skipToNextGame();
+            });
+        }
+
+        const mobileLogout = document.getElementById('mobile-logout-btn');
+        if (mobileLogout) {
+            mobileLogout.addEventListener('click', async () => {
+                toggleDrawer(false);
+                await this.logout();
+            });
+        }
     }
 
     initBackgroundCanvas() {
@@ -777,6 +840,7 @@ class ArcadeHub {
         if (this.currentGame) {
             this.showHub(false);
         }
+        if (this.mobileDrawer) this.mobileDrawer.classList.remove('active');
         if (this.leaderboardModal) this.leaderboardModal.classList.remove('active');
         if (this.partyModal) this.partyModal.classList.remove('active');
         if (this.pilotModal) this.pilotModal.classList.remove('active');
@@ -992,6 +1056,7 @@ class ArcadeHub {
         const navLabel = document.getElementById('pilot-nav-label');
         const navLed = document.getElementById('pilot-nav-led');
         const navLogoutBtn = document.getElementById('nav-logout-btn');
+        const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
         const hudPilotBadge = document.getElementById('hud-pilot-badge');
         const hudPilotName = document.getElementById('hud-pilot-name');
         const lbPilotName = document.getElementById('lb-pilot-name');
@@ -1004,6 +1069,7 @@ class ArcadeHub {
                 navLed.style.boxShadow = '0 0 10px var(--neon-green)';
             }
             if (navLogoutBtn) navLogoutBtn.classList.remove('hidden');
+            if (mobileLogoutBtn) mobileLogoutBtn.classList.remove('hidden');
 
             if (hudPilotName) hudPilotName.textContent = `PILOT: ${user.username}`;
             if (hudPilotBadge) hudPilotBadge.title = `Authenticated Pilot: ${user.username} [VERIFIED]`;
@@ -1024,6 +1090,7 @@ class ArcadeHub {
                 navLed.style.boxShadow = '0 0 8px var(--neon-coral)';
             }
             if (navLogoutBtn) navLogoutBtn.classList.add('hidden');
+            if (mobileLogoutBtn) mobileLogoutBtn.classList.add('hidden');
 
             if (hudPilotName) hudPilotName.textContent = 'PILOT: GUEST';
             if (hudPilotBadge) hudPilotBadge.title = 'Restricted: Guest Play Disabled';

@@ -74,6 +74,11 @@ class FlashReflexGame {
         this.canvas.removeEventListener('pointerdown', this.handlePointerDown);
     }
 
+    handleResize(w, h) {
+        // Redraw on resize if needed
+        if (this.running) this.render();
+    }
+
     start(options = {}) {
         this.running = true;
         this.mode = options.mode || 'solo';
@@ -112,6 +117,7 @@ class FlashReflexGame {
 
         if (this.state === 'SIGNAL_ACTIVE') {
             const timeTaken = Math.round(performance.now() - this.startTime);
+            this.reactionTime = timeTaken;
 
             if (playerNum === 1 && this.player1Time === null) {
                 this.player1Time = timeTaken;
@@ -178,21 +184,26 @@ class FlashReflexGame {
 
         this.ctx.clearRect(0, 0, w, h);
 
+        const titleSize = Math.min(Math.max(20, Math.floor(w * 0.05)), 36);
+        const subSize = Math.min(Math.max(11, Math.floor(w * 0.026)), 15);
+        const hugeSize = Math.min(Math.max(34, Math.floor(w * 0.1)), 68);
+        const foulSize = Math.min(Math.max(24, Math.floor(w * 0.075)), 52);
+
         if (this.state === 'WAITING') {
             this.ctx.fillStyle = '#1A080D';
             this.ctx.fillRect(0, 0, w, h);
 
             this.ctx.save();
             this.ctx.fillStyle = '#FF3366';
-            this.ctx.font = 'bold 36px "Space Grotesk", sans-serif';
+            this.ctx.font = `bold ${titleSize}px "Space Grotesk", sans-serif`;
             this.ctx.textAlign = 'center';
             this.ctx.shadowColor = '#FF3366';
             this.ctx.shadowBlur = 18;
-            this.ctx.fillText('WAIT FOR GREEN SIGNAL...', cx, cy - 20);
+            this.ctx.fillText(w < 400 ? 'WAIT FOR GREEN...' : 'WAIT FOR GREEN SIGNAL...', cx, cy - 20);
 
-            this.ctx.font = '16px "JetBrains Mono", monospace';
+            this.ctx.font = `${subSize}px "JetBrains Mono", monospace`;
             this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-            this.ctx.fillText('DO NOT PRESS YET! RANDOM DELAY IN PROGRESS', cx, cy + 30);
+            this.ctx.fillText(w < 400 ? 'DO NOT TAP YET!' : 'DO NOT PRESS YET! RANDOM DELAY IN PROGRESS', cx, cy + 26);
             this.ctx.restore();
         } else if (this.state === 'SIGNAL_ACTIVE') {
             this.ctx.fillStyle = '#00F5A0';
@@ -200,7 +211,7 @@ class FlashReflexGame {
 
             this.ctx.save();
             this.ctx.fillStyle = '#07080C';
-            this.ctx.font = '900 68px "Space Grotesk", sans-serif';
+            this.ctx.font = `900 ${hugeSize}px "Space Grotesk", sans-serif`;
             this.ctx.textAlign = 'center';
             this.ctx.fillText('CLICK NOW!', cx, cy + 15);
             this.ctx.restore();
@@ -210,7 +221,7 @@ class FlashReflexGame {
 
             this.ctx.save();
             this.ctx.fillStyle = '#FFFFFF';
-            this.ctx.font = '900 52px "Space Grotesk", sans-serif';
+            this.ctx.font = `900 ${foulSize}px "Space Grotesk", sans-serif`;
             this.ctx.textAlign = 'center';
             this.ctx.fillText('EARLY CLICK! FOUL!', cx, cy + 15);
             this.ctx.restore();
@@ -220,7 +231,7 @@ class FlashReflexGame {
 
             this.ctx.save();
             this.ctx.fillStyle = '#00D9F5';
-            this.ctx.font = '900 60px "Space Grotesk", sans-serif';
+            this.ctx.font = `900 ${hugeSize}px "Space Grotesk", sans-serif`;
             this.ctx.textAlign = 'center';
             this.ctx.shadowColor = '#00D9F5';
             this.ctx.shadowBlur = 20;
@@ -230,10 +241,10 @@ class FlashReflexGame {
 
         if (this.mode === 'local_2p') {
             this.ctx.save();
-            this.ctx.fillStyle = 'rgba(255,255,255,0.5)';
-            this.ctx.font = '14px "JetBrains Mono", monospace';
+            this.ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            this.ctx.font = `${subSize}px "JetBrains Mono", monospace`;
             this.ctx.textAlign = 'center';
-            this.ctx.fillText('P1: [A] or Left Click | P2: [L] or Right Click', cx, h - 35);
+            this.ctx.fillText('P1: [A] or Left Side | P2: [L] or Right Side', cx, h - 35);
             this.ctx.restore();
         }
     }

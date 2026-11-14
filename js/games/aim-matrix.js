@@ -57,6 +57,15 @@ class AimMatrixGame {
         this.canvas.removeEventListener('pointerdown', this.handlePointerDown);
     }
 
+    handleResize(w, h) {
+        const padding = Math.min(80, Math.max(30, w * 0.1));
+        const topPadding = Math.min(80, Math.max(50, h * 0.12));
+        this.targets.forEach(t => {
+            t.x = Math.max(padding + t.radius, Math.min(w - padding - t.radius, t.x));
+            t.y = Math.max(topPadding + t.radius, Math.min(h - padding - t.radius, t.y));
+        });
+    }
+
     start() {
         this.running = true;
         this.targets = [];
@@ -79,10 +88,11 @@ class AimMatrixGame {
     }
 
     spawnTarget() {
-        const padding = 90;
-        const x = padding + Math.random() * (this.canvas.width - padding * 2);
-        const y = padding + 40 + Math.random() * (this.canvas.height - padding * 2 - 40);
-        const maxRadius = 32;
+        const padding = Math.min(80, Math.max(30, this.canvas.width * 0.1));
+        const topPadding = Math.min(80, Math.max(50, this.canvas.height * 0.12));
+        const x = padding + Math.random() * Math.max(20, this.canvas.width - padding * 2);
+        const y = topPadding + Math.random() * Math.max(20, this.canvas.height - topPadding - padding);
+        const maxRadius = this.canvas.width < 500 ? 28 : 32;
         const lifespan = Math.max(1.1, 2.2 - (35 - this.timeRemaining) * 0.03); // gets faster
 
         // Moving target chance
@@ -107,12 +117,13 @@ class AimMatrixGame {
     registerShot(x, y) {
         this.shotsFired++;
         let hitIndex = -1;
+        const touchSlop = this.canvas.width < 600 ? 12 : 0;
 
         // Check from top-most (newest) target
         for (let i = this.targets.length - 1; i >= 0; i--) {
             const t = this.targets[i];
             const dist = Math.hypot(x - t.x, y - t.y);
-            if (dist <= t.radius) {
+            if (dist <= t.radius + touchSlop) {
                 hitIndex = i;
                 break;
             }
@@ -381,24 +392,28 @@ class AimMatrixGame {
 
         // Top HUD Stats
         const accuracy = this.shotsFired > 0 ? Math.round((this.shotsHit / this.shotsFired) * 100) : 100;
+        const isMobile = w < 600;
+
         this.ctx.save();
         this.ctx.fillStyle = '#FFFFFF';
-        this.ctx.font = 'bold 22px "Space Grotesk", sans-serif';
-        this.ctx.fillText(`SCORE: ${this.score}`, 40, 50);
+        this.ctx.font = isMobile ? 'bold 18px "Space Grotesk", sans-serif' : 'bold 22px "Space Grotesk", sans-serif';
+        this.ctx.fillText(`SCORE: ${this.score}`, isMobile ? 16 : 40, isMobile ? 65 : 50);
 
-        this.ctx.font = '14px "JetBrains Mono", monospace';
+        this.ctx.font = isMobile ? '11px "JetBrains Mono", monospace' : '14px "JetBrains Mono", monospace';
         this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        this.ctx.fillText(`ACCURACY: ${accuracy}% | STREAK: ${this.streak} 🔥`, 40, 75);
+        this.ctx.fillText(isMobile ? `${accuracy}% ACC | ${this.streak}🔥` : `ACCURACY: ${accuracy}% | STREAK: ${this.streak} 🔥`, isMobile ? 16 : 40, isMobile ? 82 : 75);
 
         // Time Countdown
         this.ctx.textAlign = 'right';
-        this.ctx.font = '900 28px "Space Grotesk", sans-serif';
+        this.ctx.font = isMobile ? '900 22px "Space Grotesk", sans-serif' : '900 28px "Space Grotesk", sans-serif';
         this.ctx.fillStyle = this.timeRemaining < 10 ? '#FF3366' : '#00F5A0';
-        this.ctx.fillText(`${Math.ceil(this.timeRemaining)}s`, w - 40, 50);
+        this.ctx.fillText(`${Math.ceil(this.timeRemaining)}s`, isMobile ? w - 16 : w - 40, isMobile ? 65 : 50);
 
-        this.ctx.font = '12px "JetBrains Mono", monospace';
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-        this.ctx.fillText('CLICK TARGETS RAPIDLY', w - 40, 75);
+        if (!isMobile) {
+            this.ctx.font = '12px "JetBrains Mono", monospace';
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            this.ctx.fillText('CLICK TARGETS RAPIDLY', w - 40, 75);
+        }
         this.ctx.restore();
     }
 

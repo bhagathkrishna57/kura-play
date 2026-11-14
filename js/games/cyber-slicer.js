@@ -71,6 +71,12 @@ class CyberSlicerGame {
         window.removeEventListener('pointerup', this.handlePointerUp);
     }
 
+    handleResize(w, h) {
+        this.cores.forEach(c => {
+            c.x = Math.max(c.radius, Math.min(w - c.radius, c.x));
+        });
+    }
+
     addTrailPoint(e) {
         const rect = this.canvas.getBoundingClientRect();
         const scaleX = rect.width ? (this.canvas.width / rect.width) : 1;
@@ -465,10 +471,11 @@ class CyberSlicerGame {
         });
 
         // Top HUD
+        const isMobile = w < 600;
         this.ctx.save();
         this.ctx.fillStyle = '#FFFFFF';
-        this.ctx.font = 'bold 22px "Space Grotesk", sans-serif';
-        this.ctx.fillText(`SCORE: ${this.score}`, 40, 50);
+        this.ctx.font = isMobile ? 'bold 18px "Space Grotesk", sans-serif' : 'bold 22px "Space Grotesk", sans-serif';
+        this.ctx.fillText(`SCORE: ${this.score}`, isMobile ? 16 : 40, isMobile ? 65 : 50);
 
         // Lives Indicator
         this.ctx.textAlign = 'right';
@@ -476,12 +483,14 @@ class CyberSlicerGame {
         for (let i = 0; i < 3; i++) {
             lifeStr += i < this.lives ? '❤️ ' : '🖤 ';
         }
-        this.ctx.font = '20px sans-serif';
-        this.ctx.fillText(lifeStr, w - 40, 50);
+        this.ctx.font = isMobile ? '16px sans-serif' : '20px sans-serif';
+        this.ctx.fillText(lifeStr, isMobile ? w - 16 : w - 40, isMobile ? 65 : 50);
 
-        this.ctx.font = '12px "JetBrains Mono", monospace';
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-        this.ctx.fillText('SWIPE TO SLICE | DODGE RED HAZARDS', w - 40, 75);
+        if (!isMobile) {
+            this.ctx.font = '12px "JetBrains Mono", monospace';
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            this.ctx.fillText('SWIPE TO SLICE | DODGE RED HAZARDS', w - 40, 75);
+        }
         this.ctx.restore();
     }
 

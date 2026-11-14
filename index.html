@@ -119,19 +119,19 @@
             </div>
 
             <div class="nav-actions">
-                <a href="https://github.com/bhagathkrishna57/kura-play.git" target="_blank" rel="noopener" class="btn-nav" title="View Source on GitHub">
+                <a href="https://github.com/bhagathkrishna57/kura-play.git" target="_blank" rel="noopener" class="btn-nav nav-desktop-only" title="View Source on GitHub">
                     <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" style="display:inline-block; vertical-align:middle; margin-right:3px;">
                         <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
                     </svg>
                     <span>GITHUB</span>
                 </a>
-                <button class="btn-nav btn-skip-tactical" id="global-skip-btn" title="Skip to a new game instantly (Press 'N')">
+                <button class="btn-nav btn-skip-tactical nav-desktop-only" id="global-skip-btn" title="Skip to a new game instantly (Press 'N')">
                     <span>⏭</span> <span class="nav-btn-text">JUMP SECTOR</span> <span class="nav-shortcut">[N]</span>
                 </button>
-                <button class="btn-nav btn-leaderboard-nav" id="open-leaderboard-btn" title="View Global Server Leaderboard [Press L]">
+                <button class="btn-nav btn-leaderboard-nav nav-desktop-only" id="open-leaderboard-btn" title="View Global Server Leaderboard [Press L]">
                     <span>🏆</span> <span class="nav-btn-text">GLOBAL LEADERBOARD</span> <span class="nav-shortcut">[L]</span>
                 </button>
-                <button class="btn-nav" id="open-party-btn" title="Create or Join Multiplayer Party Lobby">
+                <button class="btn-nav nav-desktop-only" id="open-party-btn" title="Create or Join Multiplayer Party Lobby">
                     <span>👥</span> <span class="nav-btn-text">PARTY LOBBY</span>
                 </button>
                 <button class="btn-nav btn-pilot-auth" id="open-auth-btn">
@@ -139,12 +139,70 @@
                     <span id="pilot-nav-label">PILOT LOGIN</span>
                 </button>
                 <button class="btn-nav btn-logout hidden" id="nav-logout-btn" title="Sign out of account">
-                    <span>⏻</span> <span>LOGOUT</span>
+                    <span>⏻</span> <span class="nav-btn-text">LOGOUT</span>
                 </button>
-                <button class="btn-nav" id="toggle-sound-btn">
+                <button class="btn-nav btn-sound-toggle" id="toggle-sound-btn" title="Toggle Synthesizer Audio">
                     <span id="sound-icon">🔊</span>
                 </button>
+                <button class="btn-nav btn-mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle Tactical Menu">
+                    <span id="mobile-menu-icon">☰</span>
+                </button>
             </div>
+        </header>
+
+        <!-- Tactical Mobile Navigation Drawer -->
+        <div class="mobile-nav-drawer" id="mobile-nav-drawer">
+            <div class="mobile-nav-drawer-inner">
+                <div class="mobile-nav-header">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="led-status" style="background:var(--neon-cyan); box-shadow:0 0 8px var(--neon-cyan);"></span>
+                        <span class="mobile-nav-title">TACTICAL COMMAND MENU</span>
+                    </div>
+                    <button class="mobile-nav-close" id="mobile-nav-close" aria-label="Close menu">✕</button>
+                </div>
+                <div class="mobile-nav-links">
+                    <button class="mobile-nav-item" id="mobile-lb-btn">
+                        <span class="nav-item-icon">🏆</span>
+                        <div class="nav-item-text">
+                            <strong>GLOBAL LEADERBOARD</strong>
+                            <span>Live pilot rankings & records [L]</span>
+                        </div>
+                    </button>
+                    <button class="mobile-nav-item" id="mobile-party-btn">
+                        <span class="nav-item-icon">👥</span>
+                        <div class="nav-item-text">
+                            <strong>MULTIPLAYER PARTY LOBBY</strong>
+                            <span>Host or join P2P multiplayer room</span>
+                        </div>
+                    </button>
+                    <button class="mobile-nav-item" id="mobile-skip-btn">
+                        <span class="nav-item-icon">⏭</span>
+                        <div class="nav-item-text">
+                            <strong>JUMP COMBAT SECTOR</strong>
+                            <span>Launch next game in sequence [N]</span>
+                        </div>
+                    </button>
+                    <button class="mobile-nav-item mobile-logout-item hidden" id="mobile-logout-btn">
+                        <span class="nav-item-icon" style="color:var(--neon-coral);">⏻</span>
+                        <div class="nav-item-text">
+                            <strong style="color:var(--neon-coral);">LOGOUT PILOT</strong>
+                            <span>Lock arcade & clear active session</span>
+                        </div>
+                    </button>
+                    <a href="https://github.com/bhagathkrishna57/kura-play.git" target="_blank" rel="noopener" class="mobile-nav-item">
+                        <span class="nav-item-icon">↗</span>
+                        <div class="nav-item-text">
+                            <strong>GITHUB REPOSITORY</strong>
+                            <span>View open-source code & releases</span>
+                        </div>
+                    </a>
+                </div>
+                <div class="mobile-nav-footer">
+                    <span class="led-status"></span>
+                    <span>ARCHITECT: BHAGATH KRISHNA.M // KURA ARCADE OS</span>
+                </div>
+            </div>
+        </div>
         </header>
 
         <!-- Main Hub Grid (Game Selection View) -->
@@ -532,19 +590,21 @@
                     </div>
                 </div>
 
-                <table class="leaderboard-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 15%;">RANK</th>
-                            <th style="width: 45%;">PILOT CALLSIGN</th>
-                            <th style="width: 25%;">SCORE</th>
-                            <th style="width: 15%;">VERIFIED</th>
-                        </tr>
-                    </thead>
-                    <tbody id="leaderboard-table-body">
-                        <!-- Populated by JS -->
-                    </tbody>
-                </table>
+                <div class="lb-table-wrapper">
+                    <table class="leaderboard-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 15%;">RANK</th>
+                                <th style="width: 45%;">PILOT CALLSIGN</th>
+                                <th style="width: 25%;">SCORE</th>
+                                <th style="width: 15%;">VERIFIED</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-table-body">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>

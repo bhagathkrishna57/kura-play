@@ -312,62 +312,180 @@
 /* ========================================================= */
 /* MOBILE & TOUCH ADAPTATIONS FOR IN-GAME HUD & OVERLAYS     */
 /* ========================================================= */
+#active-game-canvas {
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+}
+
+@media (max-width: 1024px) {
+    .ingame-top-hud {
+        gap: 8px;
+        padding: 6px 14px;
+    }
+    .hud-btn {
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+}
+
 @media (max-width: 768px) {
     .corner-back-btn {
-        top: 10px;
-        left: 10px;
-        padding: 7px 12px;
-        font-size: 11px;
+        top: 8px;
+        left: 8px;
+        padding: 8px 12px;
+        font-size: 12px;
+        min-height: 40px;
+        min-width: 40px;
         z-index: 35;
-    }
-
-    .ingame-top-hud {
-        top: 10px;
-        left: auto;
-        right: 10px;
-        transform: none;
-        padding: 5px 8px;
-        gap: 6px;
-        max-width: calc(100vw - 110px);
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
         border-radius: 20px;
     }
 
+    .ingame-top-hud {
+        top: 8px;
+        left: auto;
+        right: 8px;
+        transform: none;
+        padding: 4px 6px;
+        gap: 5px;
+        max-width: calc(100vw - 86px);
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        border-radius: 24px;
+        background: rgba(10, 14, 22, 0.92);
+    }
+
     .hud-title-badge {
-        display: none;
+        display: none !important;
+    }
+
+    /* Redundant back button inside HUD since corner-back-btn is always visible */
+    #hud-back-btn {
+        display: none !important;
+    }
+
+    .hud-pilot-tag {
+        font-size: 11px;
+        padding: 4px 8px;
+        max-width: 110px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .hud-btn {
-        padding: 5px 8px;
-        font-size: 10px;
+        padding: 8px 10px;
+        font-size: 11px;
+        min-height: 38px;
         white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .game-over-overlay {
+        padding: 16px;
+        box-sizing: border-box;
     }
 
     .game-over-card {
-        width: 94vw !important;
+        width: 100% !important;
         max-width: 420px !important;
+        max-height: 92dvh !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
         padding: 24px 16px !important;
         margin: auto;
     }
 
     .game-over-title {
-        font-size: 26px !important;
+        font-size: clamp(22px, 6vw, 30px) !important;
     }
 
     .game-over-score {
-        font-size: 14px;
-        margin-bottom: 16px;
+        font-size: clamp(14px, 4vw, 17px);
+        margin-bottom: 18px;
     }
 
     .game-over-actions {
-        gap: 8px;
+        gap: 10px;
     }
 
     .btn-retry,
-    .btn-next-game,
+    .btn-next-game {
+        font-size: 14px;
+        min-height: 48px;
+        padding: 12px 18px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
+
+@media (max-width: 600px) {
+    /* Hide keyboard mode toggle and party button inside active HUD on small phone portrait */
+    #hud-mode-toggle,
+    #hud-party-btn {
+        display: none !important;
+    }
+
+    .hud-pilot-tag {
+        max-width: 85px;
+    }
+}
+
+@media (max-width: 360px) {
+    .corner-back-btn {
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+    .hud-pilot-tag {
+        display: none !important;
+    }
     .hud-btn {
-        font-size: 13px;
-        padding: 12px 16px;
+        padding: 6px 8px;
+        font-size: 10px;
+    }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+    .corner-back-btn {
+        top: 6px;
+        left: 6px;
+        padding: 5px 10px;
+        font-size: 11px;
+        min-height: 34px;
+    }
+    .ingame-top-hud {
+        top: 6px;
+        right: 6px;
+        padding: 3px 6px;
+    }
+    .hud-btn {
+        min-height: 32px;
+        padding: 4px 8px;
+        font-size: 10px;
+    }
+    .game-over-card {
+        padding: 16px !important;
+        max-height: 96dvh !important;
+    }
+    .game-over-title {
+        font-size: 20px !important;
+        margin-bottom: 4px;
+    }
+    .game-over-score {
+        margin-bottom: 10px;
+    }
+    .game-over-actions {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    .btn-retry,
+    .btn-next-game {
+        flex: 1;
+        min-height: 40px;
+        padding: 8px 12px;
+        font-size: 12px;
     }
 }

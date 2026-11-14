@@ -34,5 +34,11 @@
     "sector": "AIM MATRIX",
     "role": "PILOT",
     "createdAt": "2026-11-14"
+  },
+  "M_PILOT_8717": {
+    "username": "M_PILOT_8717",
+    "sector": "NEON DASH",
+    "role": "PILOT",
+    "createdAt": "2026-11-14"
   }
 }

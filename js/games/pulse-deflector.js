@@ -96,6 +96,20 @@ class PulseDeflectorGame {
             }
         };
 
+        this.lastTapTime = 0;
+        this.handlePointerDown = (e) => {
+            if (!this.running) return;
+            this.handlePointerMove(e);
+            const now = Date.now();
+            if (now - this.lastTapTime < 340) {
+                this.triggerEmpBlast();
+                this.lastTapTime = 0;
+            } else {
+                this.lastTapTime = now;
+            }
+        };
+
+        this.canvas.addEventListener('pointerdown', this.handlePointerDown);
         this.canvas.addEventListener('pointermove', this.handlePointerMove);
         this.canvas.addEventListener('contextmenu', this.handleContextMenu);
         window.addEventListener('keydown', this.handleKeyDown);
@@ -105,10 +119,17 @@ class PulseDeflectorGame {
     destroy() {
         this.running = false;
         if (this.animId) cancelAnimationFrame(this.animId);
+        this.canvas.removeEventListener('pointerdown', this.handlePointerDown);
         this.canvas.removeEventListener('pointermove', this.handlePointerMove);
         this.canvas.removeEventListener('contextmenu', this.handleContextMenu);
         window.removeEventListener('keydown', this.handleKeyDown);
         window.removeEventListener('keyup', this.handleKeyUp);
+    }
+
+    handleResize(w, h) {
+        const minDim = Math.min(w, h);
+        this.shieldRadius = Math.min(85, Math.max(55, minDim * 0.2));
+        this.p2ShieldRadius = Math.min(135, Math.max(85, minDim * 0.32));
     }
 
     start(options = {}) {
@@ -587,13 +608,14 @@ class PulseDeflectorGame {
 
     renderHUD(cx, cy, w, h) {
         const ctx = this.ctx;
+        const isMobile = w < 600;
         ctx.save();
 
         // 1. Core Health Bar (Top Center)
-        const barW = 240;
-        const barH = 10;
+        const barW = Math.min(240, Math.max(140, w - 120));
+        const barH = isMobile ? 8 : 10;
         const barX = cx - barW / 2;
-        const barY = 85;
+        const barY = isMobile ? 65 : 85;
 
         ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
         ctx.fillRect(barX, barY, barW, barH);
@@ -605,15 +627,15 @@ class PulseDeflectorGame {
         ctx.fillRect(barX, barY, barW * hpPct, barH);
 
         ctx.fillStyle = '#FFFFFF';
-        ctx.font = '700 11px "JetBrains Mono", monospace';
+        ctx.font = isMobile ? '700 10px "JetBrains Mono", monospace' : '700 11px "JetBrains Mono", monospace';
         ctx.textAlign = 'center';
-        ctx.fillText(`CORE INTEGRITY // ${this.coreHp}%`, cx, barY - 8);
+        ctx.fillText(`CORE // ${this.coreHp}%`, cx, barY - 6);
 
         // 2. EMP Overdrive Gauge (Bottom Center)
-        const empW = 200;
-        const empH = 8;
+        const empW = Math.min(200, Math.max(120, w - 80));
+        const empH = isMobile ? 6 : 8;
         const empX = cx - empW / 2;
-        const empY = h - 55;
+        const empY = h - (isMobile ? 32 : 55);
 
         ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
         ctx.fillRect(empX, empY, empW, empH);
@@ -625,30 +647,32 @@ class PulseDeflectorGame {
         ctx.fillRect(empX, empY, empW * empPct, empH);
 
         ctx.fillStyle = this.empEnergy >= 50 ? '#00F5A0' : 'rgba(255,255,255,0.6)';
-        ctx.font = '900 12px "Space Grotesk", sans-serif';
+        ctx.font = isMobile ? '900 10px "Space Grotesk", sans-serif' : '900 12px "Space Grotesk", sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(
-            this.empEnergy >= 50 ? '⚡ OVERDRIVE EMP READY [SPACE]' : `OVERDRIVE CHARGE: ${Math.round(this.empEnergy)}%`,
+            this.empEnergy >= 50 ? (isMobile ? '⚡ EMP READY [DOUBLE-TAP]' : '⚡ OVERDRIVE EMP READY [SPACE]') : `CHARGE: ${Math.round(this.empEnergy)}%`,
             cx,
-            empY - 10
+            empY - 7
         );
 
         // 3. Score & Combo Counter (Top Left / Right)
         ctx.fillStyle = '#00D9F5';
-        ctx.font = '900 28px "Space Grotesk", sans-serif';
+        ctx.font = isMobile ? '900 18px "Space Grotesk", sans-serif' : '900 28px "Space Grotesk", sans-serif';
         ctx.textAlign = 'left';
         ctx.shadowColor = '#00D9F5';
         ctx.shadowBlur = 14;
-        ctx.fillText(`${this.score}`, 30, 95);
+        ctx.fillText(`${this.score}`, isMobile ? 16 : 30, isMobile ? 65 : 95);
 
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-        ctx.font = '11px "JetBrains Mono", monospace';
-        ctx.fillText('TACTICAL DEFLECT SCORE', 30, 115);
+        if (!isMobile) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.font = '11px "JetBrains Mono", monospace';
+            ctx.fillText('TACTICAL DEFLECT SCORE', 30, 115);
+        }
 
         if (this.combo > 1) {
             ctx.fillStyle = '#00F5A0';
-            ctx.font = '900 18px "Space Grotesk", sans-serif';
-            ctx.fillText(`${this.combo}X DEFLECT STREAK!`, 30, 140);
+            ctx.font = isMobile ? '900 13px "Space Grotesk", sans-serif' : '900 18px "Space Grotesk", sans-serif';
+            ctx.fillText(`${this.combo}X STREAK!`, isMobile ? 16 : 30, isMobile ? 84 : 140);
         }
 
         ctx.restore();
