@@ -1,24 +1,38 @@
 {
   "BHAGATH_KRISHNA": {
     "username": "BHAGATH_KRISHNA",
-    "hash": "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
     "sector": "ALL",
     "role": "ARCHITECT",
     "createdAt": "2026-10-31"
   },
   "TEST_PILOT_63": {
     "username": "TEST_PILOT_63",
-    "hash": "75f3bf0a3955ebbe4d2d1370e4772adb2b4e2bf1285efc0b47b21c4ed77e125a",
     "sector": "AIM MATRIX",
+    "role": "PILOT",
     "createdAt": "2026-10-31"
   },
   "ZACK": {
     "username": "ZACK",
-    "email": "zack@gmail.com",
-    "provider": "google",
-    "picture": "https://lh3.googleusercontent.com/a/default-user",
     "sector": "GLOBAL PILOT",
-    "verified": true,
+    "role": "PILOT",
+    "createdAt": "2026-11-14"
+  },
+  "TEST_PILOT": {
+    "username": "TEST_PILOT",
+    "sector": "SECTOR 02 // NEON DASH",
+    "role": "PILOT",
+    "createdAt": "2026-11-14"
+  },
+  "CYBER_NINJA": {
+    "username": "CYBER_NINJA",
+    "sector": "ALL SECTORS",
+    "role": "PILOT",
+    "createdAt": "2026-11-14"
+  },
+  "SHADOW_RUNNER": {
+    "username": "SHADOW_RUNNER",
+    "sector": "AIM MATRIX",
+    "role": "PILOT",
     "createdAt": "2026-11-14"
   }
 }

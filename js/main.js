@@ -35,6 +35,7 @@ class ArcadeHub {
         window.addEventListener('orientationchange', () => {
             setTimeout(() => this.resizeActiveCanvas(), 150);
         });
+        this.initMandatoryGate();
         this.initPilotAuth();
     }
 
@@ -187,7 +188,18 @@ class ArcadeHub {
         });
 
         window.addEventListener('keydown', (e) => {
-            if (e.target.tagName === 'INPUT') return;
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+            // Strict Gate Check: Block all gameplay shortcuts when logged out or gate is active
+            const user = window.KuraServer ? window.KuraServer.currentUser : null;
+            if (!user) {
+                // If user presses Escape, don't do anything destructive
+                if (e.key === 'Escape') {
+                    if (this.leaderboardModal) this.leaderboardModal.classList.remove('active');
+                    if (this.partyModal) this.partyModal.classList.remove('active');
+                }
+                return;
+            }
 
             // R to Try Again / Restart game anytime
             if (e.key === 'r' || e.key === 'R') {
@@ -374,6 +386,10 @@ class ArcadeHub {
     }
 
     retryGame() {
+        if (!window.KuraServer || !window.KuraServer.currentUser) {
+            this.showAuthGate('PILOT AUTHENTICATION REQUIRED // GUEST PLAY DISABLED');
+            return;
+        }
         if (!this.currentGameId) return;
         if (window.KuraSounds) window.KuraSounds.playClick();
         if (this.roundOverOverlay) {
@@ -404,6 +420,11 @@ class ArcadeHub {
     }
 
     launchGame(gameId) {
+        if (!window.KuraServer || !window.KuraServer.currentUser) {
+            this.showAuthGate('PILOT AUTHENTICATION REQUIRED // GUEST PLAY DISABLED');
+            return;
+        }
+
         const GameClass = window.KuraGames ? window.KuraGames[gameId] : null;
         if (!GameClass) return;
 
@@ -432,12 +453,22 @@ class ArcadeHub {
         document.getElementById('current-game-title').textContent = instance.meta.title.toUpperCase();
         document.getElementById('current-game-icon').textContent = instance.meta.icon;
 
-        // Start game instantly — no loading animation
+        // Display authenticated pilot callsign on in-game HUD
+        const hudPilot = document.getElementById('hud-pilot-name');
+        if (hudPilot && window.KuraServer.currentUser) {
+            hudPilot.textContent = `PILOT: ${window.KuraServer.currentUser.username}`;
+        }
+
+        // Start game instantly
         this.currentGame = instance;
         instance.start({ mode: this.currentMode });
     }
 
     skipToNextGame() {
+        if (!window.KuraServer || !window.KuraServer.currentUser) {
+            this.showAuthGate('PILOT AUTHENTICATION REQUIRED // GUEST PLAY DISABLED');
+            return;
+        }
         if (window.KuraSounds) window.KuraSounds.playClick();
         if (this.roundOverOverlay) {
             this.roundOverOverlay.classList.remove('active');
@@ -483,14 +514,21 @@ class ArcadeHub {
                 srvStatusEl.className = 'go-server-status-pill saved';
                 srvStatusEl.onclick = null;
                 if (srvIconEl) srvIconEl.textContent = '⚡';
-                srvMsgEl.textContent = `SYNCING SCORE AS [${user.username}]...`;
-                const submitRes = await window.KuraServer.submitScore(this.currentGameId, numericScore);
-                if (srvIconEl) srvIconEl.textContent = '✓';
-                if (submitRes && submitRes.success) {
-                    srvMsgEl.textContent = `SAVED TO GLOBAL LEADERBOARD AS [${user.username}]`;
-                } else {
-                    srvMsgEl.textContent = `SCORE RECORDED AS [${user.username}]`;
+                srvMsgEl.textContent = `SAVING SCORE TO DATABASE AS [${user.username}]...`;
+                
+                try {
+                    const submitRes = await window.KuraServer.submitScore(this.currentGameId, numericScore);
+                    if (srvIconEl) srvIconEl.textContent = '✓';
+                    if (submitRes && submitRes.success) {
+                        const rankInfo = submitRes.userRank ? ` // RANK #${submitRes.userRank} OF ${submitRes.totalPilots || 1}` : '';
+                        srvMsgEl.innerHTML = `SAVED TO DATABASE AS <strong>[${user.username}]</strong>${rankInfo}`;
+                    } else {
+                        srvMsgEl.textContent = `SCORE RECORDED AS [${user.username}]`;
+                    }
+                } catch (e) {
+                    srvMsgEl.textContent = `SAVED LOCALLY AS [${user.username}]`;
                 }
+
                 srvStatusEl.style.cursor = 'pointer';
                 srvStatusEl.title = 'Click to open Global Leaderboard [L]';
                 srvStatusEl.onclick = () => {
@@ -499,9 +537,9 @@ class ArcadeHub {
             } else {
                 srvStatusEl.className = 'go-server-status-pill prompt';
                 if (srvIconEl) srvIconEl.textContent = '🔒';
-                srvMsgEl.innerHTML = `<strong>NOT LOGGED IN:</strong> Log in to save <strong>${scoreDisplay}</strong> to Global Leaderboard`;
+                srvMsgEl.innerHTML = `<strong>ACCESS DENIED:</strong> Please authenticate to save scores.`;
                 srvStatusEl.onclick = () => {
-                    this.openPilotModal();
+                    this.showAuthGate();
                 };
             }
         }
@@ -591,6 +629,163 @@ class ArcadeHub {
     }
 
     // ==============================================================
+    // MANDATORY AUTHENTICATION ACCESS GATE
+    // ==============================================================
+    initMandatoryGate() {
+        this.authGate = document.getElementById('mandatory-auth-gate');
+        this.gateTabLogin = document.getElementById('gate-tab-login');
+        this.gateTabReg = document.getElementById('gate-tab-register');
+        this.gateFormLogin = document.getElementById('gate-form-login');
+        this.gateFormReg = document.getElementById('gate-form-register');
+        this.gateError = document.getElementById('gate-error-banner');
+        this.navLogoutBtn = document.getElementById('nav-logout-btn');
+
+        if (this.gateTabLogin && this.gateTabReg) {
+            this.gateTabLogin.addEventListener('click', () => {
+                this.gateTabLogin.classList.add('active');
+                this.gateTabReg.classList.remove('active');
+                if (this.gateFormLogin) this.gateFormLogin.classList.remove('hidden');
+                if (this.gateFormReg) this.gateFormReg.classList.add('hidden');
+                if (this.gateError) this.gateError.classList.add('hidden');
+                if (window.KuraSounds) window.KuraSounds.playClick();
+            });
+
+            this.gateTabReg.addEventListener('click', () => {
+                this.gateTabReg.classList.add('active');
+                this.gateTabLogin.classList.remove('active');
+                if (this.gateFormReg) this.gateFormReg.classList.remove('hidden');
+                if (this.gateFormLogin) this.gateFormLogin.classList.add('hidden');
+                if (this.gateError) this.gateError.classList.add('hidden');
+                if (window.KuraSounds) window.KuraSounds.playClick();
+            });
+        }
+
+        if (this.gateFormLogin) {
+            this.gateFormLogin.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const u = document.getElementById('gate-login-user').value.trim();
+                const p = document.getElementById('gate-login-pass').value;
+                const submitBtn = document.getElementById('gate-login-submit');
+
+                if (!u || !p) return;
+
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span>AUTHENTICATING PILOT...</span>';
+                }
+
+                const res = await window.KuraServer.login(u, p);
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<span>AUTHENTICATE & ENTER ARCADE ➔</span>';
+                }
+
+                if (res.success) {
+                    if (window.KuraSounds) window.KuraSounds.synthAccessGrantedSlam();
+                    this.hideAuthGate();
+                    this.updateAuthUI();
+                } else {
+                    if (this.gateError) {
+                        this.gateError.textContent = res.error || 'Authentication failed.';
+                        this.gateError.classList.remove('hidden');
+                    }
+                }
+            });
+        }
+
+        if (this.gateFormReg) {
+            this.gateFormReg.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const u = document.getElementById('gate-reg-user').value.trim();
+                const p = document.getElementById('gate-reg-pass').value;
+                const s = document.getElementById('gate-reg-sector').value;
+                const submitBtn = document.getElementById('gate-reg-submit');
+
+                if (!u || !p) return;
+
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span>ENLISTING PILOT...</span>';
+                }
+
+                const res = await window.KuraServer.register(u, p, s);
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<span>ENLIST PILOT & ENTER ARCADE ➔</span>';
+                }
+
+                if (res.success) {
+                    if (window.KuraSounds) window.KuraSounds.synthAccessGrantedSlam();
+                    this.hideAuthGate();
+                    this.updateAuthUI();
+                } else {
+                    if (this.gateError) {
+                        this.gateError.textContent = res.error || 'Registration failed.';
+                        this.gateError.classList.remove('hidden');
+                    }
+                }
+            });
+        }
+
+        if (this.navLogoutBtn) {
+            this.navLogoutBtn.addEventListener('click', async () => {
+                if (window.KuraSounds) window.KuraSounds.playClick();
+                await this.logout();
+            });
+        }
+
+        // Gate state check on startup
+        if (window.KuraServer && window.KuraServer.currentUser) {
+            this.hideAuthGate();
+        } else {
+            this.showAuthGate();
+        }
+    }
+
+    showAuthGate(errorMsg = '') {
+        if (!this.authGate) this.authGate = document.getElementById('mandatory-auth-gate');
+        if (this.authGate) {
+            this.authGate.classList.remove('hidden');
+            this.authGate.style.display = 'flex';
+        }
+        if (this.gateError) {
+            if (errorMsg) {
+                this.gateError.textContent = errorMsg;
+                this.gateError.classList.remove('hidden');
+            } else {
+                this.gateError.classList.add('hidden');
+            }
+        }
+    }
+
+    hideAuthGate() {
+        if (!this.authGate) this.authGate = document.getElementById('mandatory-auth-gate');
+        if (this.authGate) {
+            this.authGate.classList.add('hidden');
+            setTimeout(() => {
+                if (this.authGate && this.authGate.classList.contains('hidden')) {
+                    this.authGate.style.display = 'none';
+                }
+            }, 350);
+        }
+    }
+
+    async logout() {
+        if (window.KuraServer) {
+            await window.KuraServer.logout();
+        }
+        if (this.currentGame) {
+            this.showHub(false);
+        }
+        if (this.leaderboardModal) this.leaderboardModal.classList.remove('active');
+        if (this.partyModal) this.partyModal.classList.remove('active');
+        if (this.pilotModal) this.pilotModal.classList.remove('active');
+
+        this.showAuthGate('Pilot logged out. Please authenticate with your callsign to enter the arcade matrix.');
+        this.updateAuthUI();
+    }
+
+    // ==============================================================
     // PILOT AUTHENTICATION & GLOBAL LEADERBOARD INTEGRATION
     // ==============================================================
     initPilotAuth() {
@@ -604,43 +799,51 @@ class ArcadeHub {
         const gateLoginBtn = document.getElementById('gate-open-login-btn');
         const googleBtn = document.getElementById('btn-google-signin');
         const gateGoogleBtn = document.getElementById('gate-google-signin-btn');
+        const mandatoryGoogleBtn = document.getElementById('mandatory-google-signin-btn');
 
         const triggerGoogleAuth = async () => {
             if (window.KuraSounds) window.KuraSounds.playClick();
             
-            let googleName = prompt('Enter Your Name / Callsign for Google Login:', '');
+            let googleName = prompt('Enter Your Pilot Callsign / Display Name for Google Sign-In:', '');
             if (!googleName || !googleName.trim()) return;
-            googleName = googleName.trim();
+            googleName = googleName.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+            if (googleName.length < 3) googleName = `PILOT_${Math.floor(1000 + Math.random() * 9000)}`;
 
             const res = await window.KuraServer.loginWithGoogle({
                 name: googleName,
-                email: `${googleName.toLowerCase().replace(/[^a-z0-9]/g, '')}@gmail.com`,
+                email: `${googleName.toLowerCase()}@gmail.com`,
                 picture: 'https://lh3.googleusercontent.com/a/default-user'
             });
 
             if (res.success) {
                 if (window.KuraSounds) window.KuraSounds.synthAccessGrantedSlam();
+                this.hideAuthGate();
                 this.closePilotModal();
                 this.updateAuthUI();
                 if (this.leaderboardModal && this.leaderboardModal.classList.contains('active')) {
                     this.openLeaderboardModal();
+                }
+            } else {
+                if (this.gateError) {
+                    this.gateError.textContent = res.error || 'Google login failed.';
+                    this.gateError.classList.remove('hidden');
                 }
             }
         };
 
         if (googleBtn) googleBtn.addEventListener('click', triggerGoogleAuth);
         if (gateGoogleBtn) gateGoogleBtn.addEventListener('click', triggerGoogleAuth);
+        if (mandatoryGoogleBtn) mandatoryGoogleBtn.addEventListener('click', triggerGoogleAuth);
 
         if (openAuthBtn) {
             openAuthBtn.addEventListener('click', () => {
                 const user = window.KuraServer ? window.KuraServer.currentUser : null;
                 if (user) {
                     if (confirm(`Logged in as [${user.username}]. Do you want to log out?`)) {
-                        window.KuraServer.logout();
-                        this.updateAuthUI();
+                        this.logout();
                     }
                 } else {
-                    this.openPilotModal();
+                    this.showAuthGate();
                 }
             });
         }
@@ -652,7 +855,7 @@ class ArcadeHub {
         if (gateLoginBtn) {
             gateLoginBtn.addEventListener('click', () => {
                 this.leaderboardModal.classList.remove('active');
-                this.openPilotModal();
+                this.showAuthGate();
             });
         }
 
@@ -660,21 +863,21 @@ class ArcadeHub {
             tabLoginBtn.addEventListener('click', () => {
                 tabLoginBtn.classList.add('active');
                 tabRegBtn.classList.remove('active');
-                formLogin.classList.remove('hidden');
-                formReg.classList.add('hidden');
+                if (formLogin) formLogin.classList.remove('hidden');
+                if (formReg) formReg.classList.add('hidden');
                 if (errorBanner) errorBanner.classList.add('hidden');
             });
 
             tabRegBtn.addEventListener('click', () => {
                 tabRegBtn.classList.add('active');
                 tabLoginBtn.classList.remove('active');
-                formReg.classList.remove('hidden');
-                formLogin.classList.add('hidden');
+                if (formReg) formReg.classList.remove('hidden');
+                if (formLogin) formLogin.classList.add('hidden');
                 if (errorBanner) errorBanner.classList.add('hidden');
             });
         }
 
-        // Handle Login Submission
+        // Handle Modal Login Submission
         if (formLogin) {
             formLogin.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -686,6 +889,7 @@ class ArcadeHub {
                 if (res.success) {
                     if (window.KuraSounds) window.KuraSounds.synthAccessGrantedSlam();
                     this.closePilotModal();
+                    this.hideAuthGate();
                     this.updateAuthUI();
                 } else {
                     if (errorBanner) {
@@ -696,7 +900,7 @@ class ArcadeHub {
             });
         }
 
-        // Handle Registration Submission
+        // Handle Modal Registration Submission
         if (formReg) {
             formReg.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -709,6 +913,7 @@ class ArcadeHub {
                 if (res.success) {
                     if (window.KuraSounds) window.KuraSounds.synthSciFiNotification();
                     this.closePilotModal();
+                    this.hideAuthGate();
                     this.updateAuthUI();
                 } else {
                     if (errorBanner) {
@@ -786,6 +991,9 @@ class ArcadeHub {
         const user = window.KuraServer ? window.KuraServer.currentUser : null;
         const navLabel = document.getElementById('pilot-nav-label');
         const navLed = document.getElementById('pilot-nav-led');
+        const navLogoutBtn = document.getElementById('nav-logout-btn');
+        const hudPilotBadge = document.getElementById('hud-pilot-badge');
+        const hudPilotName = document.getElementById('hud-pilot-name');
         const lbPilotName = document.getElementById('lb-pilot-name');
 
         if (user) {
@@ -795,6 +1003,11 @@ class ArcadeHub {
                 navLed.style.background = 'var(--neon-green)';
                 navLed.style.boxShadow = '0 0 10px var(--neon-green)';
             }
+            if (navLogoutBtn) navLogoutBtn.classList.remove('hidden');
+
+            if (hudPilotName) hudPilotName.textContent = `PILOT: ${user.username}`;
+            if (hudPilotBadge) hudPilotBadge.title = `Authenticated Pilot: ${user.username} [VERIFIED]`;
+
             if (lbPilotName) lbPilotName.textContent = `PILOT: ${user.username}${providerTag}`;
 
             // Update Multiplayer callsign
@@ -810,6 +1023,10 @@ class ArcadeHub {
                 navLed.style.background = 'var(--neon-coral)';
                 navLed.style.boxShadow = '0 0 8px var(--neon-coral)';
             }
+            if (navLogoutBtn) navLogoutBtn.classList.add('hidden');
+
+            if (hudPilotName) hudPilotName.textContent = 'PILOT: GUEST';
+            if (hudPilotBadge) hudPilotBadge.title = 'Restricted: Guest Play Disabled';
             if (lbPilotName) lbPilotName.textContent = 'GUEST (NOT LOGGED IN)';
         }
     }
@@ -870,24 +1087,52 @@ class ArcadeHub {
         const searchInput = document.getElementById('lb-search-input');
         const query = searchQuery !== '' ? searchQuery : (searchInput ? searchInput.value.trim() : '');
 
-        const scores = await window.KuraServer.fetchLeaderboard(gameId, query);
+        const data = await window.KuraServer.fetchLeaderboard(gameId, query);
+        const scores = (data && Array.isArray(data.scores)) ? data.scores : (Array.isArray(data) ? data : []);
         const currentUser = window.KuraServer.currentUser;
 
+        // Render User Rank Banner
+        const myRankIcon = document.getElementById('lb-my-rank-icon');
+        const myRankHeadline = document.getElementById('lb-my-rank-headline');
+        const myScoreDisplay = document.getElementById('lb-my-score-display');
+
+        if (myRankHeadline && myScoreDisplay) {
+            if (data && data.userRank) {
+                const rank = data.userRank;
+                const total = data.totalPilots || scores.length;
+                const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '🏆';
+                if (myRankIcon) myRankIcon.textContent = medal;
+                myRankHeadline.innerHTML = `RANK <span style="color: var(--neon-green); font-weight: 900;">#${rank}</span> OF ${total} VERIFIED PILOTS`;
+                const statUnit = gameId === 'flash-reflex' ? 'ms' : gameId === 'neon-dash' ? 'm' : 'pts';
+                myScoreDisplay.textContent = `${data.userBestScore} ${statUnit}`;
+            } else if (currentUser) {
+                if (myRankIcon) myRankIcon.textContent = '🎯';
+                myRankHeadline.textContent = `UNRANKED IN SECTOR ${gameId.toUpperCase()}`;
+                myScoreDisplay.textContent = 'PLAY TO CLAIM RANK';
+            } else {
+                if (myRankIcon) myRankIcon.textContent = '🔒';
+                myRankHeadline.textContent = 'LOGIN REQUIRED FOR RANKING';
+                myScoreDisplay.textContent = '--';
+            }
+        }
+
         if (!scores || scores.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">${query ? 'NO MATCHING PILOTS FOUND FOR "' + query.toUpperCase() + '"' : 'NO RECORDED SCORES YET. BE THE FIRST!'}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-dim); padding: 20px;">${query ? 'NO MATCHING PILOTS FOUND FOR "' + query.toUpperCase() + '"' : 'NO RECORDED SCORES YET IN THIS SECTOR. BE THE FIRST!'}</td></tr>`;
             return;
         }
 
         tbody.innerHTML = scores.map((item, idx) => {
-            const isCurrent = currentUser && currentUser.username === item.username;
-            const rankBadge = idx === 0 ? '🥇 #1' : idx === 1 ? '🥈 #2' : idx === 2 ? '🥉 #3' : `#${idx + 1}`;
+            const isCurrent = currentUser && currentUser.username.toUpperCase() === item.username.toUpperCase();
+            const rankNum = item.rank || (idx + 1);
+            const rankBadge = rankNum === 1 ? '🥇 #1' : rankNum === 2 ? '🥈 #2' : rankNum === 3 ? '🥉 #3' : `#${rankNum}`;
             const statText = gameId === 'flash-reflex' ? `${item.score} ms` : gameId === 'neon-dash' ? `${item.score}m` : `${item.score} pts`;
 
             return `
                 <tr class="${isCurrent ? 'lb-current-pilot-row' : ''}">
-                    <td><strong style="color: ${idx < 3 ? 'var(--neon-green)' : 'var(--text-muted)'}; font-family: 'JetBrains Mono', monospace;">${rankBadge}</strong></td>
+                    <td><strong style="color: ${rankNum <= 3 ? 'var(--neon-green)' : 'var(--text-muted)'}; font-family: 'JetBrains Mono', monospace;">${rankBadge}</strong></td>
                     <td>
                         <strong style="color: ${isCurrent ? 'var(--neon-cyan)' : '#FFFFFF'}; font-family: 'Space Grotesk', sans-serif;">${item.username}</strong>
+                        ${isCurrent ? `<span style="font-size: 10px; background: rgba(0, 217, 245, 0.2); color: var(--neon-cyan); padding: 2px 6px; border-radius: 4px; margin-left: 6px; border: 1px solid var(--neon-cyan); font-weight: 700;">YOU</span>` : ''}
                         ${item.title ? `<span style="font-size: 9px; color: var(--neon-emerald); margin-left: 6px; padding: 2px 6px; border: 1px solid var(--neon-emerald); border-radius: 4px;">${item.title}</span>` : ''}
                     </td>
                     <td style="color: var(--neon-cyan); font-family: 'JetBrains Mono', monospace; font-weight: 700;">${statText}</td>

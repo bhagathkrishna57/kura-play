@@ -1,64 +1,23 @@
 // KURA Arcade Server Client & Authentication Engine
-// Bridges the frontend with the Node.js backend server & Cloud Leaderboard Network
+// Bridges the frontend with the SQLite Backend Server & Permanent Database
 // Architected by Bhagath Krishna.M
 
 class KuraServerClient {
     constructor() {
         this.serverUrl = window.location.origin.includes('http') ? window.location.origin : 'http://localhost:3000';
         this.isServerOnline = false;
+        this.token = localStorage.getItem('kura_auth_token') || null;
         this.currentUser = this.loadLocalSession();
         this.onAuthChangeCallbacks = [];
 
-        // Seed default leaderboard if offline
-        this.offlineLeaderboardKey = 'kura_server_leaderboard';
-        this.offlineUsersKey = 'kura_registered_pilots';
-        this.initOfflineStore();
-
-        this.checkServerHealth();
+        this.init();
     }
 
-    initOfflineStore() {
-        if (!localStorage.getItem(this.offlineLeaderboardKey)) {
-            const seed = {
-                'aim-matrix': [
-                    { username: 'BHAGATH_KRISHNA', score: 980, date: '2026-10-31', verified: true, title: 'ARCADE ARCHITECT' },
-                    { username: 'CYBER_VIPER', score: 720, date: '2026-10-31', verified: true },
-                    { username: 'NEO_PHANTOM', score: 540, date: '2026-10-30', verified: true },
-                    { username: 'REFLEX_ZERO', score: 410, date: '2026-10-30', verified: true }
-                ],
-                'neon-dash': [
-                    { username: 'BHAGATH_KRISHNA', score: 1420, date: '2026-10-31', verified: true, title: 'ARCADE ARCHITECT' },
-                    { username: 'VOID_RUNNER', score: 950, date: '2026-10-31', verified: true },
-                    { username: 'SPEED_GHOST', score: 680, date: '2026-10-30', verified: true }
-                ],
-                'flash-reflex': [
-                    { username: 'BHAGATH_KRISHNA', score: 142, date: '2026-10-31', verified: true, title: 'ARCADE ARCHITECT' },
-                    { username: 'SYNAPSE_99', score: 178, date: '2026-10-31', verified: true },
-                    { username: 'QUANTUM_EYE', score: 215, date: '2026-10-30', verified: true }
-                ],
-                'cyber-slicer': [
-                    { username: 'BHAGATH_KRISHNA', score: 1850, date: '2026-10-31', verified: true, title: 'ARCADE ARCHITECT' },
-                    { username: 'BLADE_MASTER', score: 1240, date: '2026-10-31', verified: true },
-                    { username: 'LASER_CLAW', score: 890, date: '2026-10-30', verified: true }
-                ],
-                'pulse-deflector': [
-                    { username: 'BHAGATH_KRISHNA', score: 1680, date: '2026-10-31', verified: true, title: 'ARCADE ARCHITECT' },
-                    { username: 'SHIELD_WARDEN', score: 1120, date: '2026-10-31', verified: true },
-                    { username: 'PHOTON_PULSE', score: 840, date: '2026-10-30', verified: true }
-                ]
-            };
-            localStorage.setItem(this.offlineLeaderboardKey, JSON.stringify(seed));
-        }
-
-        if (!localStorage.getItem(this.offlineUsersKey)) {
-            const seedUsers = {
-                'BHAGATH_KRISHNA': {
-                    username: 'BHAGATH_KRISHNA',
-                    password: '123',
-                    sector: 'ARCHITECT'
-                }
-            };
-            localStorage.setItem(this.offlineUsersKey, JSON.stringify(seedUsers));
+    async init() {
+        await this.checkServerHealth();
+        // If we have a saved token, verify it with the server
+        if (this.token) {
+            await this.verifySession();
         }
     }
 
@@ -71,12 +30,18 @@ class KuraServerClient {
         }
     }
 
-    saveLocalSession(user) {
+    saveLocalSession(user, token = null) {
         this.currentUser = user;
+        if (token) {
+            this.token = token;
+            localStorage.setItem('kura_auth_token', token);
+        }
         if (user) {
             localStorage.setItem('kura_pilot_session', JSON.stringify(user));
         } else {
+            this.token = null;
             localStorage.removeItem('kura_pilot_session');
+            localStorage.removeItem('kura_auth_token');
         }
         this.notifyAuthChange();
     }
@@ -101,16 +66,41 @@ class KuraServerClient {
         return false;
     }
 
-    async register(username, password, sector = 'PRECISION') {
+    async verifySession() {
+        if (!this.token) return null;
+        try {
+            const res = await fetch(`${this.serverUrl}/api/me`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${this.token}`,
+                    'X-Auth-Token': this.token
+                },
+                mode: 'cors'
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success && data.user) {
+                    this.saveLocalSession(data.user, this.token);
+                    return data.user;
+                }
+            }
+        } catch (e) {}
+
+        // If server rejected the token, clear it
+        this.saveLocalSession(null);
+        return null;
+    }
+
+    // Register Pilot (Account Creation)
+    async register(username, password, sector = 'SECTOR 01 // AIM MATRIX') {
         const cleanUser = username.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
         if (cleanUser.length < 3 || cleanUser.length > 16) {
-            return { success: false, error: 'Callsign must be 3-16 characters.' };
+            return { success: false, error: 'Callsign must be 3 to 16 alphanumeric characters.' };
         }
         if (!password || password.length < 3) {
-            return { success: false, error: 'Security PIN must be at least 3 characters.' };
+            return { success: false, error: 'Password must be at least 3 characters.' };
         }
 
-        // Try Server First
         try {
             const res = await fetch(`${this.serverUrl}/api/register`, {
                 method: 'POST',
@@ -119,33 +109,23 @@ class KuraServerClient {
                 mode: 'cors'
             });
             const data = await res.json();
-            if (data.success) {
-                this.saveLocalSession(data.user);
-                return { success: true, user: data.user };
+            if (res.ok && data.success) {
+                this.saveLocalSession(data.user, data.token);
+                return { success: true, user: data.user, token: data.token };
             }
-            if (data.error && !data.error.includes('Failed to fetch')) {
-                return { success: false, error: data.error };
-            }
-        } catch (e) {}
-
-        // Fallback: Resilient Client Auth Storage
-        const users = JSON.parse(localStorage.getItem(this.offlineUsersKey) || '{}');
-        if (users[cleanUser]) {
-            return { success: false, error: 'Callsign already registered. Please login.' };
+            return { success: false, error: data.error || 'Registration failed.' };
+        } catch (e) {
+            return { success: false, error: 'Cannot connect to arcade server. Please ensure server is running.' };
         }
-
-        const newUser = { username: cleanUser, password, sector };
-        users[cleanUser] = newUser;
-        localStorage.setItem(this.offlineUsersKey, JSON.stringify(users));
-
-        this.saveLocalSession({ username: cleanUser, sector });
-        return { success: true, user: { username: cleanUser, sector } };
     }
 
+    // Login Pilot
     async login(username, password) {
         const cleanUser = username.trim().toUpperCase();
+        if (!cleanUser || !password) {
+            return { success: false, error: 'Please enter your callsign and password.' };
+        }
 
-        // Try Server First
         try {
             const res = await fetch(`${this.serverUrl}/api/login`, {
                 method: 'POST',
@@ -154,154 +134,126 @@ class KuraServerClient {
                 mode: 'cors'
             });
             const data = await res.json();
-            if (data.success) {
-                this.saveLocalSession(data.user);
-                return { success: true, user: data.user };
+            if (res.ok && data.success) {
+                this.saveLocalSession(data.user, data.token);
+                return { success: true, user: data.user, token: data.token };
             }
-            if (data.error && !data.error.includes('Failed to fetch')) {
-                return { success: false, error: data.error };
-            }
-        } catch (e) {}
-
-        // Fallback: Client Storage Check
-        const users = JSON.parse(localStorage.getItem(this.offlineUsersKey) || '{}');
-        const user = users[cleanUser];
-        if (!user || user.password !== password) {
-            return { success: false, error: 'Invalid Callsign or Security PIN.' };
+            return { success: false, error: data.error || 'Invalid callsign or password.' };
+        } catch (e) {
+            return { success: false, error: 'Cannot connect to arcade server. Please ensure server is running.' };
         }
-
-        this.saveLocalSession({ username: cleanUser, sector: user.sector, role: user.role });
-        return { success: true, user: { username: cleanUser, sector: user.sector, role: user.role } };
     }
 
-    async loginWithGoogle(profile = {}) {
-        const name = (profile.name || '').trim();
-        const email = profile.email || (name ? `${name.toLowerCase().replace(/[^a-z0-9]/g, '')}@gmail.com` : 'pilot@gmail.com');
-        const picture = profile.picture || 'https://lh3.googleusercontent.com/a/default-user';
-
-        // Try Server First
+    // Google Pilot Authentication (OAuth / Instant Login)
+    async loginWithGoogle(profile) {
         try {
             const res = await fetch(`${this.serverUrl}/api/auth/google`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, name, picture }),
+                body: JSON.stringify(profile || {}),
                 mode: 'cors'
             });
             const data = await res.json();
-            if (data.success) {
-                this.saveLocalSession(data.user);
-                return { success: true, user: data.user };
+            if (res.ok && data.success) {
+                this.saveLocalSession(data.user, data.token);
+                return { success: true, user: data.user, token: data.token };
             }
-        } catch (e) {}
-
-        // Fallback: Client Google Session
-        const rawName = (name || email.split('@')[0]).trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '_');
-        const cleanUser = rawName.slice(0, 16) || 'GOOGLE_PILOT';
-        const googleUser = {
-            username: cleanUser,
-            email,
-            picture,
-            provider: 'google',
-            sector: 'GLOBAL PILOT',
-            verified: true
-        };
-
-        const users = JSON.parse(localStorage.getItem(this.offlineUsersKey) || '{}');
-        users[cleanUser] = googleUser;
-        localStorage.setItem(this.offlineUsersKey, JSON.stringify(users));
-
-        this.saveLocalSession(googleUser);
-        return { success: true, user: googleUser };
-    }
-
-    logout() {
-        this.saveLocalSession(null);
-    }
-
-    async fetchLeaderboard(gameId, searchQuery = '') {
-        // Try server
-        try {
-            const q = searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : '';
-            const res = await fetch(`${this.serverUrl}/api/leaderboard?game=${encodeURIComponent(gameId)}${q}`, { mode: 'cors' });
-            if (res.ok) {
-                const data = await res.json();
-                if (data.scores) return data.scores;
-                if (data.leaderboard && data.leaderboard[gameId]) return data.leaderboard[gameId];
-            }
-        } catch (e) {}
-
-        // Fallback store
-        try {
-            const data = JSON.parse(localStorage.getItem(this.offlineLeaderboardKey) || '{}');
-            let list = data[gameId] || [];
-            if (searchQuery) {
-                const term = searchQuery.toUpperCase();
-                list = list.filter(item => item.username.includes(term));
-            }
-            return list;
+            return { success: false, error: data.error || 'Google authentication failed.' };
         } catch (e) {
-            return [];
+            return { success: false, error: 'Cannot connect to arcade server.' };
         }
     }
 
+    // Logout Pilot
+    async logout() {
+        if (this.token) {
+            try {
+                await fetch(`${this.serverUrl}/api/logout`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${this.token}`,
+                        'X-Auth-Token': this.token
+                    },
+                    mode: 'cors'
+                });
+            } catch (e) {}
+        }
+        this.saveLocalSession(null);
+        return { success: true };
+    }
+
+    // Submit High Score to Permanent Database
     async submitScore(gameId, score) {
         if (!this.currentUser) {
-            return { success: false, error: 'User must be logged in to submit scores.' };
+            return { success: false, error: 'Pilot must be logged in to record scores.' };
         }
 
-        const username = this.currentUser.username;
         const scoreVal = parseFloat(score);
-
-        // Try server
         try {
+            const headers = { 'Content-Type': 'application/json' };
+            if (this.token) {
+                headers['Authorization'] = `Bearer ${this.token}`;
+                headers['X-Auth-Token'] = this.token;
+            }
+
             const res = await fetch(`${this.serverUrl}/api/score`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, gameId, score: scoreVal }),
+                headers,
+                body: JSON.stringify({
+                    username: this.currentUser.username,
+                    gameId,
+                    score: scoreVal
+                }),
                 mode: 'cors'
             });
+
             if (res.ok) {
                 const data = await res.json();
-                return { success: true, rankings: data.rankings };
+                return {
+                    success: true,
+                    userRank: data.userRank,
+                    userBestScore: data.userBestScore,
+                    totalPilots: data.totalPilots
+                };
             }
-        } catch (e) {}
-
-        // Fallback store
-        try {
-            const data = JSON.parse(localStorage.getItem(this.offlineLeaderboardKey) || '{}');
-            if (!data[gameId]) data[gameId] = [];
-
-            const list = data[gameId];
-            const existingIdx = list.findIndex(item => item.username === username);
-
-            if (gameId === 'flash-reflex') {
-                if (existingIdx !== -1) {
-                    if (scoreVal < list[existingIdx].score) {
-                        list[existingIdx].score = Math.round(scoreVal);
-                        list[existingIdx].date = new Date().toISOString().split('T')[0];
-                    }
-                } else {
-                    list.push({ username, score: Math.round(scoreVal), date: new Date().toISOString().split('T')[0], verified: true });
-                }
-                list.sort((a, b) => a.score - b.score);
-            } else {
-                if (existingIdx !== -1) {
-                    if (scoreVal > list[existingIdx].score) {
-                        list[existingIdx].score = Math.round(scoreVal);
-                        list[existingIdx].date = new Date().toISOString().split('T')[0];
-                    }
-                } else {
-                    list.push({ username, score: Math.round(scoreVal), date: new Date().toISOString().split('T')[0], verified: true });
-                }
-                list.sort((a, b) => b.score - a.score);
-            }
-
-            if (list.length > 50) list.length = 50;
-            localStorage.setItem(this.offlineLeaderboardKey, JSON.stringify(data));
-            return { success: true, rankings: list.slice(0, 10) };
+            const errData = await res.json().catch(() => ({}));
+            return { success: false, error: errData.error || 'Failed to record score.' };
         } catch (e) {
             return { success: false, error: e.message };
         }
+    }
+
+    // Fetch Leaderboard and User Position
+    async fetchLeaderboard(gameId, searchQuery = '') {
+        const username = this.currentUser ? this.currentUser.username : '';
+        const qParam = searchQuery ? `&q=${encodeURIComponent(searchQuery)}` : '';
+        const uParam = username ? `&username=${encodeURIComponent(username)}` : '';
+
+        try {
+            const res = await fetch(`${this.serverUrl}/api/leaderboard?game=${encodeURIComponent(gameId)}${qParam}${uParam}`, {
+                method: 'GET',
+                mode: 'cors'
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                return {
+                    gameId: data.gameId,
+                    scores: data.scores || [],
+                    userRank: data.userRank,
+                    userBestScore: data.userBestScore,
+                    totalPilots: data.totalPilots
+                };
+            }
+        } catch (e) {}
+
+        return {
+            gameId,
+            scores: [],
+            userRank: null,
+            userBestScore: null,
+            totalPilots: 0
+        };
     }
 }
 

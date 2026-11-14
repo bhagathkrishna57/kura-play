@@ -1,0 +1,8 @@
+# SQLite ephemeral journal files
+*.db-wal
+*.db-shm
+
+# OS & Environment
+.DS_Store
+Thumbs.db
+node_modules/

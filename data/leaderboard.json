@@ -8,6 +8,12 @@
       "title": "ARCADE ARCHITECT"
     },
     {
+      "username": "CYBER_NINJA",
+      "score": 850,
+      "date": "2026-11-14",
+      "verified": true
+    },
+    {
       "username": "CYBER_VIPER",
       "score": 720,
       "date": "2026-10-31",
@@ -24,6 +30,12 @@
       "score": 410,
       "date": "2026-10-30",
       "verified": true
+    },
+    {
+      "username": "SHADOW_RUNNER",
+      "score": 0,
+      "date": "2026-11-14",
+      "verified": true
     }
   ],
   "neon-dash": [
@@ -38,6 +50,12 @@
       "username": "VOID_RUNNER",
       "score": 950,
       "date": "2026-10-31",
+      "verified": true
+    },
+    {
+      "username": "TEST_PILOT",
+      "score": 880,
+      "date": "2026-11-14",
       "verified": true
     },
     {
