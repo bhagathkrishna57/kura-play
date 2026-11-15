@@ -742,6 +742,10 @@ class ArcadeHub {
     // ==============================================================
     initMandatoryGate() {
         this.authGate = document.getElementById('mandatory-auth-gate');
+        this.gateTabLogin = document.getElementById('gate-tab-login');
+        this.gateTabReg = document.getElementById('gate-tab-register');
+        this.gateFormLogin = document.getElementById('gate-form-login');
+        this.gateFormReg = document.getElementById('gate-form-register');
         this.gateError = document.getElementById('gate-error-banner');
         this.navLogoutBtn = document.getElementById('nav-logout-btn');
 
@@ -749,6 +753,96 @@ class ArcadeHub {
             this.navLogoutBtn.addEventListener('click', async () => {
                 if (window.KuraSounds) window.KuraSounds.playClick();
                 await this.logout();
+            });
+        }
+
+        // Callsign tab switcher: Login vs Register
+        if (this.gateTabLogin && this.gateTabReg) {
+            this.gateTabLogin.addEventListener('click', () => {
+                this.gateTabLogin.classList.add('active');
+                this.gateTabReg.classList.remove('active');
+                if (this.gateFormLogin) this.gateFormLogin.classList.remove('hidden');
+                if (this.gateFormReg) this.gateFormReg.classList.add('hidden');
+                if (this.gateError) this.gateError.classList.add('hidden');
+                if (window.KuraSounds) window.KuraSounds.playClick();
+            });
+            this.gateTabReg.addEventListener('click', () => {
+                this.gateTabReg.classList.add('active');
+                this.gateTabLogin.classList.remove('active');
+                if (this.gateFormReg) this.gateFormReg.classList.remove('hidden');
+                if (this.gateFormLogin) this.gateFormLogin.classList.add('hidden');
+                if (this.gateError) this.gateError.classList.add('hidden');
+                if (window.KuraSounds) window.KuraSounds.playClick();
+            });
+        }
+
+        // Callsign Login Form
+        if (this.gateFormLogin) {
+            this.gateFormLogin.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const userInput = document.getElementById('gate-login-user');
+                const passInput = document.getElementById('gate-login-pass');
+                if (!userInput || !passInput) return;
+                const username = userInput.value.trim();
+                const password = passInput.value;
+                if (!username || !password) return;
+                if (window.KuraSounds) window.KuraSounds.playClick();
+                if (this.gateError) this.gateError.classList.add('hidden');
+
+                const submitBtn = document.getElementById('gate-login-submit');
+                if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<span>AUTHENTICATING...</span>'; }
+
+                try {
+                    const res = await window.KuraServer.login(username, password);
+                    if (res.success) {
+                        if (window.KuraSounds) window.KuraSounds.synthAccessGrantedSlam();
+                        this.hideAuthGate();
+                        this.updateAuthUI();
+                    } else {
+                        const msg = res.error || 'Login failed. Check your callsign and password.';
+                        if (this.gateError) { this.gateError.textContent = msg; this.gateError.classList.remove('hidden'); }
+                    }
+                } catch (err) {
+                    if (this.gateError) { this.gateError.textContent = 'Connection error. Try again.'; this.gateError.classList.remove('hidden'); }
+                } finally {
+                    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<span>AUTHENTICATE & ENTER ARCADE ➔</span>'; }
+                }
+            });
+        }
+
+        // Callsign Register Form
+        if (this.gateFormReg) {
+            this.gateFormReg.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const userInput = document.getElementById('gate-reg-user');
+                const passInput = document.getElementById('gate-reg-pass');
+                const sectorInput = document.getElementById('gate-reg-sector');
+                if (!userInput || !passInput) return;
+                const username = userInput.value.trim();
+                const password = passInput.value;
+                const sector = sectorInput ? sectorInput.value : 'AIM MATRIX';
+                if (!username || !password) return;
+                if (window.KuraSounds) window.KuraSounds.playClick();
+                if (this.gateError) this.gateError.classList.add('hidden');
+
+                const submitBtn = document.getElementById('gate-reg-submit');
+                if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '<span>ENLISTING...</span>'; }
+
+                try {
+                    const res = await window.KuraServer.register(username, password, sector);
+                    if (res.success) {
+                        if (window.KuraSounds) window.KuraSounds.synthAccessGrantedSlam();
+                        this.hideAuthGate();
+                        this.updateAuthUI();
+                    } else {
+                        const msg = res.error || 'Registration failed. Try a different callsign.';
+                        if (this.gateError) { this.gateError.textContent = msg; this.gateError.classList.remove('hidden'); }
+                    }
+                } catch (err) {
+                    if (this.gateError) { this.gateError.textContent = 'Connection error. Try again.'; this.gateError.classList.remove('hidden'); }
+                } finally {
+                    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<span>ENLIST PILOT & ENTER ARCADE ➔</span>'; }
+                }
             });
         }
 
@@ -760,7 +854,7 @@ class ArcadeHub {
             this.authLoading = false;
             this.hideAuthGate();
         } else {
-            if (gateLoader) gateLoader.classList.remove('hidden');
+            if (gateLoader) gateLoader.classList.add('hidden');
             this.showAuthGate();
         }
     }
@@ -817,7 +911,7 @@ class ArcadeHub {
         if (this.pilotModal) this.pilotModal.classList.remove('active');
         if (this.profileModal) this.profileModal.classList.remove('active');
 
-        this.showAuthGate('Pilot logged out. Please continue with Google to enter.');
+        this.showAuthGate('Pilot logged out. Enter your Callsign to return.');
         this.updateAuthUI();
     }
 

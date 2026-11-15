@@ -2,17 +2,14 @@
   "version": 2,
   "builds": [
     {
-      "src": "index.html",
-      "use": "@vercel/static"
+      "src": "server.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "status": 307,
-      "headers": {
-        "Location": "https://kura-play.lovable.app/"
-      }
+      "dest": "/server.js"
     }
   ]
 }
