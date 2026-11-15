@@ -1,9 +1,18 @@
 {
-  "redirects": [
+  "version": 2,
+  "builds": [
     {
-      "source": "/:path*",
-      "destination": "https://kura-play.lovable.app/",
-      "permanent": false
+      "src": "index.html",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "status": 307,
+      "headers": {
+        "Location": "https://kura-play.lovable.app/"
+      }
     }
   ]
 }
