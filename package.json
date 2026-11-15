@@ -21,10 +21,10 @@
   },
   "homepage": "https://github.com/bhagathkrishna57/kura-play#readme",
   "engines": {
-    "node": ">=22.5.0"
+    "node": "20.x"
   },
   "dependencies": {
-    "better-sqlite3": "^11.5.0",
+    "better-sqlite3": "^11.9.1",
     "firebase": "^13.3.0"
   }
 }
