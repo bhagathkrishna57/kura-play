@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
     <meta name="author" content="Bhagath Krishna.M">
     <title>KURA // The Anti-Boredom Cyber Arcade</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@500&display=swap">
     <link rel="stylesheet" href="css/style.css?v=4.2">
     <link rel="stylesheet" href="css/animations.css?v=4.2">
     <link rel="stylesheet" href="css/games.css?v=4.2">
@@ -25,15 +26,7 @@
                     <span>K</span>
                 </div>
                 <h1 class="gate-title">Pilot Access Protocol</h1>
-                <p class="gate-sub">Mandatory identification required. Please log in with your Callsign or create a new pilot account to enter the arcade matrix.</p>
-            </div>
-
-            <!-- Auth Protocol Switcher (Google, Email, Phone, Callsign) -->
-            <div class="gate-method-tabs" id="gate-method-tabs">
-                <button type="button" class="gate-method-btn active" data-method="google">⚡ GOOGLE</button>
-                <button type="button" class="gate-method-btn" data-method="email">✉️ EMAIL</button>
-                <button type="button" class="gate-method-btn" data-method="phone">📱 PHONE</button>
-                <button type="button" class="gate-method-btn" data-method="callsign">🔑 CALLSIGN</button>
+                <p class="gate-sub">Mandatory identification required. Continue with your Google account to enter the arcade matrix.</p>
             </div>
 
             <!-- Auth Loading State Indicator -->
@@ -44,137 +37,23 @@
 
             <div id="gate-error-banner" class="auth-error-banner hidden" style="margin-bottom: 14px;"></div>
 
-            <!-- PANEL 1: GOOGLE AUTH -->
+            <!-- GOOGLE SIGN-IN (only sign-in method) -->
             <div class="auth-method-panel" id="method-panel-google">
                 <div class="google-auth-container" style="margin-bottom: 14px;">
-                    <button type="button" class="btn-google-auth" id="mandatory-google-signin-btn" title="Instant One-Click Google Pilot Authentication">
-                        <svg class="google-svg-icon" viewBox="0 0 24 24" width="18" height="18">
-                            <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
-                            <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/>
-                            <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.04 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
-                            <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
-                        </svg>
-                        <span>SIGN IN WITH GOOGLE</span>
+                    <button type="button" class="btn-google-auth" id="mandatory-google-signin-btn">
+                        <svg class="google-svg-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/></svg>
+                        <span>Continue with Google</span>
                     </button>
                     <div style="font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 10px;">
-                        Instant verified pilot access using your official Google identity.
+                        Instant verified pilot access with your Google account.
                     </div>
                 </div>
-            </div>
-
-            <!-- PANEL 2: FIREBASE EMAIL & PASSWORD -->
-            <div class="auth-method-panel hidden" id="method-panel-email">
-                <div class="gate-tabs" style="margin-bottom: 12px;">
-                    <button type="button" class="gate-tab-btn active" id="gate-email-tab-login">EMAIL LOGIN</button>
-                    <button type="button" class="gate-tab-btn" id="gate-email-tab-register">ENLIST NEW EMAIL</button>
-                </div>
-                <form id="gate-form-email" class="gate-form">
-                    <div class="input-group hidden" id="gate-email-callsign-grp">
-                        <label class="input-label">CALLSIGN / PILOT HANDLE</label>
-                        <input type="text" id="gate-email-callsign" class="text-input" placeholder="e.g. VIPER_99" maxlength="16" autocomplete="username">
-                    </div>
-                    <div class="input-group">
-                        <label class="input-label">EMAIL ADDRESS</label>
-                        <input type="email" id="gate-email-val" class="text-input" placeholder="pilot@net.matrix" required autocomplete="email">
-                    </div>
-                    <div class="input-group">
-                        <label class="input-label">PASSWORD</label>
-                        <input type="password" id="gate-email-pass" class="text-input" placeholder="Min. 6 characters" required autocomplete="current-password">
-                    </div>
-                    <button type="submit" class="gate-btn-submit" id="gate-email-submit">
-                        <span>AUTHENTICATE WITH EMAIL ➔</span>
-                    </button>
-                </form>
-            </div>
-
-            <!-- PANEL 3: FIREBASE PHONE SMS OTP -->
-            <div class="auth-method-panel hidden" id="method-panel-phone">
-                <form id="gate-form-phone" class="gate-form">
-                    <div id="gate-phone-step-send">
-                        <div class="input-group">
-                            <label class="input-label">PHONE NUMBER (WITH COUNTRY CODE)</label>
-                            <input type="tel" id="gate-phone-number" class="text-input" placeholder="+1 555 123 4567 or +91 9876543210" required autocomplete="tel">
-                        </div>
-                        <div class="input-group">
-                            <label class="input-label">CALLSIGN / PILOT HANDLE (OPTIONAL)</label>
-                            <input type="text" id="gate-phone-callsign" class="text-input" placeholder="e.g. VIPER_99" maxlength="16">
-                        </div>
-                        <div id="recaptcha-phone-container" style="margin-bottom: 6px;"></div>
-                        <button type="button" class="gate-btn-submit" id="gate-phone-send-btn">
-                            <span>TRANSMIT SMS VERIFICATION CODE ➔</span>
-                        </button>
-                    </div>
-
-                    <div id="gate-phone-step-verify" class="hidden">
-                        <div style="font-size: 11px; color: var(--neon-cyan); margin-bottom: 8px;">
-                            <span>✓ SMS TRANSMITTED. ENTER 6-DIGIT VERIFICATION CODE:</span>
-                        </div>
-                        <div class="input-group">
-                            <label class="input-label">6-DIGIT OTP CODE</label>
-                            <input type="text" id="gate-phone-otp" class="text-input" placeholder="e.g. 123456" maxlength="6" autocomplete="one-time-code">
-                        </div>
-                        <button type="button" class="gate-btn-submit" id="gate-phone-verify-btn">
-                            <span>CONFIRM OTP & ENTER ARCADE ➔</span>
-                        </button>
-                        <div style="text-align: center; margin-top: 8px;">
-                            <button type="button" id="gate-phone-change-btn" style="background:none; border:none; color:var(--text-muted); font-size:11px; cursor:pointer; text-decoration:underline;">← Change phone number</button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-
-            <!-- PANEL 4: CALLSIGN & PIN (LOCAL/SQLITE) -->
-            <div class="auth-method-panel hidden" id="method-panel-callsign">
-                <div class="gate-tabs">
-                    <button type="button" class="gate-tab-btn active" id="gate-tab-login">PILOT LOGIN</button>
-                    <button type="button" class="gate-tab-btn" id="gate-tab-register">ENLIST NEW PILOT (SIGN UP)</button>
-                </div>
-
-                <!-- Gate Login Form -->
-                <form id="gate-form-login" class="gate-form">
-                    <div class="input-group">
-                        <label class="input-label">CALLSIGN / USERNAME</label>
-                        <input type="text" id="gate-login-user" class="text-input" placeholder="e.g. VIPER_99" required autocomplete="username">
-                    </div>
-                    <div class="input-group">
-                        <label class="input-label">SECURITY PASSWORD / PIN</label>
-                        <input type="password" id="gate-login-pass" class="text-input" placeholder="Enter PIN or password" required autocomplete="current-password">
-                    </div>
-                    <button type="submit" class="gate-btn-submit" id="gate-login-submit">
-                        <span>AUTHENTICATE & ENTER ARCADE ➔</span>
-                    </button>
-                </form>
-
-                <!-- Gate Register Form -->
-                <form id="gate-form-register" class="gate-form hidden">
-                    <div class="input-group">
-                        <label class="input-label">CHOOSE YOUR CALLSIGN</label>
-                        <input type="text" id="gate-reg-user" class="text-input" placeholder="3-16 alphanumeric chars" maxlength="16" required autocomplete="username">
-                    </div>
-                    <div class="input-group">
-                        <label class="input-label">CREATE SECURITY PASSWORD / PIN</label>
-                        <input type="password" id="gate-reg-pass" class="text-input" placeholder="Min. 3 characters" required autocomplete="new-password">
-                    </div>
-                    <div class="input-group">
-                        <label class="input-label">PRIMARY TACTICAL SECTOR</label>
-                        <select id="gate-reg-sector" class="text-input" style="background: rgba(14, 18, 27, 0.95); cursor: pointer;">
-                            <option value="AIM MATRIX">SECTOR 01 // AIM MATRIX (Precision)</option>
-                            <option value="NEON DASH">SECTOR 02 // NEON DASH (Runner)</option>
-                            <option value="FLASH REFLEX">SECTOR 03 // FLASH REFLEX (Reaction)</option>
-                            <option value="CYBER SLICER">SECTOR 04 // CYBER SLICER (Kinetic)</option>
-                            <option value="PULSE DEFLECTOR">SECTOR 05 // PULSE DEFLECTOR (Defense)</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="gate-btn-submit" id="gate-reg-submit">
-                        <span>ENLIST PILOT & ENTER ARCADE ➔</span>
-                    </button>
-                </form>
             </div>
 
             <div class="gate-footer-status">
                 <div style="display: flex; align-items: center; gap: 6px;">
                     <span class="led-status" style="background: var(--neon-green); box-shadow: 0 0 6px var(--neon-green);"></span>
-                    <span>PERMANENT SQLITE 3 DATABASE ENGINE</span>
+                    <span>SECURED BY LOVABLE CLOUD</span>
                 </div>
                 <span>SYS.VER.2.5</span>
             </div>
@@ -534,72 +413,19 @@
                 <div class="auth-icon-badge">⚡</div>
                 <div>
                     <h2 class="modal-title" id="auth-modal-title">Pilot Authentication</h2>
-                    <p class="modal-subtitle">Login to register your callsign on the global server leaderboard.</p>
+                    <p class="modal-subtitle">Continue with Google to put your scores on the leaderboard.</p>
                 </div>
             </div>
 
             <!-- Google Sign-In Quick Action -->
             <div class="google-auth-container">
-                <button type="button" class="btn-google-auth" id="btn-google-signin" title="Instant One-Click Google Pilot Authentication">
-                    <svg class="google-svg-icon" viewBox="0 0 24 24" width="18" height="18">
-                        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
-                        <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/>
-                        <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.04 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
-                        <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
-                    </svg>
-                    <span>SIGN IN WITH GOOGLE</span>
+                <button type="button" class="btn-google-auth" id="btn-google-signin">
+                    <svg class="google-svg-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/></svg>
+                    <span>Continue with Google</span>
                 </button>
-                <div class="google-auth-divider">
-                    <span>OR CONTINUE WITH CALLSIGN & PIN</span>
-                </div>
-            </div>
-
-            <!-- Auth Mode Toggle Tabs -->
-            <div class="auth-tab-bar">
-                <button class="auth-tab-btn active" id="tab-login-btn">LOG IN</button>
-                <button class="auth-tab-btn" id="tab-register-btn">REGISTER NEW PILOT</button>
             </div>
 
             <div id="auth-error-msg" class="auth-error-banner hidden"></div>
-
-            <!-- Login Form -->
-            <form id="form-pilot-login" class="auth-form active">
-                <div class="input-group">
-                    <label class="input-label">CALLSIGN / USERNAME</label>
-                    <input type="text" id="login-username" class="text-input" placeholder="e.g. VIPER_99" required autocomplete="username">
-                </div>
-                <div class="input-group">
-                    <label class="input-label">SECURITY ACCESS PIN / PASSWORD</label>
-                    <input type="password" id="login-password" class="text-input" placeholder="Enter PIN or password" required autocomplete="current-password">
-                </div>
-                <button type="submit" class="btn-primary auth-submit-btn" id="btn-submit-login">
-                    <span>AUTHENTICATE PILOT ➔</span>
-                </button>
-            </form>
-
-            <!-- Register Form -->
-            <form id="form-pilot-register" class="auth-form hidden">
-                <div class="input-group">
-                    <label class="input-label">CHOOSE YOUR CALLSIGN</label>
-                    <input type="text" id="reg-username" class="text-input" placeholder="3-16 alphanumeric chars" maxlength="16" required autocomplete="username">
-                </div>
-                <div class="input-group">
-                    <label class="input-label">CREATE SECURITY PIN / PASSWORD</label>
-                    <input type="password" id="reg-password" class="text-input" placeholder="Min. 3 characters" required autocomplete="new-password">
-                </div>
-                <div class="input-group">
-                    <label class="input-label">HOME TACTICAL SECTOR</label>
-                    <select id="reg-sector" class="text-input" style="background: rgba(14, 18, 27, 0.95); cursor: pointer;">
-                        <option value="AIM MATRIX">SECTOR 01 // AIM MATRIX (Precision)</option>
-                        <option value="NEON DASH">SECTOR 02 // NEON DASH (Runner)</option>
-                        <option value="FLASH REFLEX">SECTOR 03 // FLASH REFLEX (Reaction)</option>
-                        <option value="CYBER SLICER">SECTOR 04 // CYBER SLICER (Kinetic)</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn-primary auth-submit-btn" id="btn-submit-reg">
-                    <span>ENLIST NEW PILOT ➔</span>
-                </button>
-            </form>
 
             <div class="auth-server-status-pill">
                 <span class="led-status" id="server-status-led"></span>
@@ -652,10 +478,10 @@
                             <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.04 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
                             <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
                         </svg>
-                        <span>SIGN IN WITH GOOGLE</span>
+                        <span>Continue with Google</span>
                     </button>
                     <button class="btn-primary gate-login-btn" id="gate-open-login-btn">
-                        <span>CALLSIGN LOGIN / REGISTER ➔</span>
+                        <span>CONTINUE WITH GOOGLE ➔</span>
                     </button>
                 </div>
             </div>
@@ -972,7 +798,7 @@
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script src="js/sound.js?v=4.3"></script>
     <script src="js/site-loader.js?v=4.3"></script>
-    <script type="module" src="js/firebase-config.js?v=4.3"></script>
+    <script src="js/cloud-auth-bridge.js?v=4.4"></script>
     <script src="js/server-client.js?v=4.3"></script>
     <script src="js/leaderboard.js?v=4.3"></script>
     <script src="js/multiplayer.js?v=4.3"></script>

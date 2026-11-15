@@ -742,316 +742,8 @@ class ArcadeHub {
     // ==============================================================
     initMandatoryGate() {
         this.authGate = document.getElementById('mandatory-auth-gate');
-        this.gateTabLogin = document.getElementById('gate-tab-login');
-        this.gateTabReg = document.getElementById('gate-tab-register');
-        this.gateFormLogin = document.getElementById('gate-form-login');
-        this.gateFormReg = document.getElementById('gate-form-register');
         this.gateError = document.getElementById('gate-error-banner');
         this.navLogoutBtn = document.getElementById('nav-logout-btn');
-
-        // Multi-Protocol Switcher (Google, Email, Phone, Callsign)
-        const methodBtns = document.querySelectorAll('#gate-method-tabs .gate-method-btn');
-        const methodPanels = {
-            google: document.getElementById('method-panel-google'),
-            email: document.getElementById('method-panel-email'),
-            phone: document.getElementById('method-panel-phone'),
-            callsign: document.getElementById('method-panel-callsign')
-        };
-
-        methodBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const method = btn.getAttribute('data-method');
-                methodBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-
-                Object.keys(methodPanels).forEach(key => {
-                    if (methodPanels[key]) {
-                        if (key === method) methodPanels[key].classList.remove('hidden');
-                        else methodPanels[key].classList.add('hidden');
-                    }
-                });
-                if (this.gateError) this.gateError.classList.add('hidden');
-                if (window.KuraSounds) window.KuraSounds.playClick();
-            });
-        });
-
-        // Email Sub-Tabs: Login vs Register
-        const emailTabLogin = document.getElementById('gate-email-tab-login');
-        const emailTabReg = document.getElementById('gate-email-tab-register');
-        const emailCallsignGrp = document.getElementById('gate-email-callsign-grp');
-        const emailSubmitBtn = document.getElementById('gate-email-submit');
-        let isEmailReg = false;
-
-        if (emailTabLogin && emailTabReg) {
-            emailTabLogin.addEventListener('click', () => {
-                isEmailReg = false;
-                emailTabLogin.classList.add('active');
-                emailTabReg.classList.remove('active');
-                if (emailCallsignGrp) emailCallsignGrp.classList.add('hidden');
-                if (emailSubmitBtn) emailSubmitBtn.innerHTML = '<span>AUTHENTICATE WITH EMAIL ➔</span>';
-                if (window.KuraSounds) window.KuraSounds.playClick();
-            });
-
-            emailTabReg.addEventListener('click', () => {
-                isEmailReg = true;
-                emailTabReg.classList.add('active');
-                emailTabLogin.classList.remove('active');
-                if (emailCallsignGrp) emailCallsignGrp.classList.remove('hidden');
-                if (emailSubmitBtn) emailSubmitBtn.innerHTML = '<span>CREATE FIREBASE ACCOUNT ➔</span>';
-                if (window.KuraSounds) window.KuraSounds.playClick();
-            });
-        }
-
-        // Email Form Submit Handler
-        const gateFormEmail = document.getElementById('gate-form-email');
-        if (gateFormEmail) {
-            gateFormEmail.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const email = document.getElementById('gate-email-val').value.trim();
-                const pass = document.getElementById('gate-email-pass').value;
-                const callsignInput = document.getElementById('gate-email-callsign');
-                const callsign = callsignInput ? callsignInput.value.trim() : '';
-
-                if (!email || !pass) return;
-
-                if (emailSubmitBtn) {
-                    emailSubmitBtn.disabled = true;
-                    emailSubmitBtn.innerHTML = '<span>AUTHENTICATING VIA FIREBASE...</span>';
-                }
-
-                try {
-                    let authRes;
-                    if (isEmailReg) {
-                        authRes = await window.KuraFirebase.signUpWithEmail(email, pass, callsign);
-                    } else {
-                        authRes = await window.KuraFirebase.signInWithEmail(email, pass);
-                    }
-
-                    if (!authRes.success) {
-                        if (this.gateError) {
-                            this.gateError.textContent = authRes.message || 'Firebase email login failed.';
-                            this.gateError.classList.remove('hidden');
-                        }
-                        return;
-                    }
-
-                    const fbUser = authRes.user;
-                    const res = await window.KuraServer.loginWithFirebase({
-                        name: callsign || fbUser.displayName || email.split('@')[0],
-                        email: fbUser.email,
-                        picture: fbUser.photoURL || '',
-                        uid: fbUser.uid,
-                        provider: 'email'
-                    });
-
-                    if (res.success) {
-                        if (window.KuraSounds) window.KuraSounds.synthAccessGrantedSlam();
-                        this.hideAuthGate();
-                        this.updateAuthUI();
-                    } else {
-                        if (this.gateError) {
-                            this.gateError.textContent = res.error || 'Server session creation failed.';
-                            this.gateError.classList.remove('hidden');
-                        }
-                    }
-                } catch (err) {
-                    if (this.gateError) {
-                        this.gateError.textContent = err.message || 'Error occurred.';
-                        this.gateError.classList.remove('hidden');
-                    }
-                } finally {
-                    if (emailSubmitBtn) {
-                        emailSubmitBtn.disabled = false;
-                        emailSubmitBtn.innerHTML = isEmailReg ? '<span>CREATE FIREBASE ACCOUNT ➔</span>' : '<span>AUTHENTICATE WITH EMAIL ➔</span>';
-                    }
-                }
-            });
-        }
-
-        // Phone SMS OTP Transmission & Verification Handlers
-        const phoneSendBtn = document.getElementById('gate-phone-send-btn');
-        const phoneVerifyBtn = document.getElementById('gate-phone-verify-btn');
-        const phoneChangeBtn = document.getElementById('gate-phone-change-btn');
-        const stepSend = document.getElementById('gate-phone-step-send');
-        const stepVerify = document.getElementById('gate-phone-step-verify');
-
-        if (phoneSendBtn) {
-            phoneSendBtn.addEventListener('click', async () => {
-                const phoneInput = document.getElementById('gate-phone-number');
-                const phoneVal = phoneInput ? phoneInput.value.trim() : '';
-
-                if (!phoneVal) {
-                    if (this.gateError) {
-                        this.gateError.textContent = 'Please enter a valid phone number with country code (e.g. +1... or +91...).';
-                        this.gateError.classList.remove('hidden');
-                    }
-                    return;
-                }
-
-                phoneSendBtn.disabled = true;
-                phoneSendBtn.innerHTML = '<span>TRANSMITTING SMS OTP...</span>';
-
-                const res = await window.KuraFirebase.sendPhoneOtp(phoneVal, 'recaptcha-phone-container');
-                phoneSendBtn.disabled = false;
-                phoneSendBtn.innerHTML = '<span>TRANSMIT SMS VERIFICATION CODE ➔</span>';
-
-                if (res.success) {
-                    if (stepSend) stepSend.classList.add('hidden');
-                    if (stepVerify) stepVerify.classList.remove('hidden');
-                    if (this.gateError) this.gateError.classList.add('hidden');
-                } else {
-                    if (this.gateError) {
-                        this.gateError.textContent = res.message || 'Failed to send SMS verification code.';
-                        this.gateError.classList.remove('hidden');
-                    }
-                }
-            });
-        }
-
-        if (phoneChangeBtn) {
-            phoneChangeBtn.addEventListener('click', () => {
-                if (stepVerify) stepVerify.classList.add('hidden');
-                if (stepSend) stepSend.classList.remove('hidden');
-                if (this.gateError) this.gateError.classList.add('hidden');
-            });
-        }
-
-        if (phoneVerifyBtn) {
-            phoneVerifyBtn.addEventListener('click', async () => {
-                const otpInput = document.getElementById('gate-phone-otp');
-                const otpVal = otpInput ? otpInput.value.trim() : '';
-                const callsignInput = document.getElementById('gate-phone-callsign');
-                const callsignVal = callsignInput ? callsignInput.value.trim() : '';
-
-                if (!otpVal || otpVal.length < 6) {
-                    if (this.gateError) {
-                        this.gateError.textContent = 'Please enter the 6-digit verification code sent via SMS.';
-                        this.gateError.classList.remove('hidden');
-                    }
-                    return;
-                }
-
-                phoneVerifyBtn.disabled = true;
-                phoneVerifyBtn.innerHTML = '<span>VERIFYING CODE...</span>';
-
-                const res = await window.KuraFirebase.verifyPhoneOtp(otpVal, callsignVal);
-                phoneVerifyBtn.disabled = false;
-                phoneVerifyBtn.innerHTML = '<span>CONFIRM OTP & ENTER ARCADE ➔</span>';
-
-                if (res.success) {
-                    const fbUser = res.user;
-                    const serverRes = await window.KuraServer.loginWithFirebase({
-                        name: callsignVal || fbUser.displayName || `PILOT_${fbUser.phoneNumber.slice(-4)}`,
-                        phoneNumber: fbUser.phoneNumber,
-                        uid: fbUser.uid,
-                        provider: 'phone'
-                    });
-
-                    if (serverRes.success) {
-                        if (window.KuraSounds) window.KuraSounds.synthAccessGrantedSlam();
-                        this.hideAuthGate();
-                        this.updateAuthUI();
-                    } else {
-                        if (this.gateError) {
-                            this.gateError.textContent = serverRes.error || 'Server login failed.';
-                            this.gateError.classList.remove('hidden');
-                        }
-                    }
-                } else {
-                    if (this.gateError) {
-                        this.gateError.textContent = res.message || 'OTP verification failed.';
-                        this.gateError.classList.remove('hidden');
-                    }
-                }
-            });
-        }
-
-        if (this.gateTabLogin && this.gateTabReg) {
-            this.gateTabLogin.addEventListener('click', () => {
-                this.gateTabLogin.classList.add('active');
-                this.gateTabReg.classList.remove('active');
-                if (this.gateFormLogin) this.gateFormLogin.classList.remove('hidden');
-                if (this.gateFormReg) this.gateFormReg.classList.add('hidden');
-                if (this.gateError) this.gateError.classList.add('hidden');
-                if (window.KuraSounds) window.KuraSounds.playClick();
-            });
-
-            this.gateTabReg.addEventListener('click', () => {
-                this.gateTabReg.classList.add('active');
-                this.gateTabLogin.classList.remove('active');
-                if (this.gateFormReg) this.gateFormReg.classList.remove('hidden');
-                if (this.gateFormLogin) this.gateFormLogin.classList.add('hidden');
-                if (this.gateError) this.gateError.classList.add('hidden');
-                if (window.KuraSounds) window.KuraSounds.playClick();
-            });
-        }
-
-        if (this.gateFormLogin) {
-            this.gateFormLogin.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const u = document.getElementById('gate-login-user').value.trim();
-                const p = document.getElementById('gate-login-pass').value;
-                const submitBtn = document.getElementById('gate-login-submit');
-
-                if (!u || !p) return;
-
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.innerHTML = '<span>AUTHENTICATING PILOT...</span>';
-                }
-
-                const res = await window.KuraServer.login(u, p);
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<span>AUTHENTICATE & ENTER ARCADE ➔</span>';
-                }
-
-                if (res.success) {
-                    if (window.KuraSounds) window.KuraSounds.synthAccessGrantedSlam();
-                    this.hideAuthGate();
-                    this.updateAuthUI();
-                } else {
-                    if (this.gateError) {
-                        this.gateError.textContent = res.error || 'Authentication failed.';
-                        this.gateError.classList.remove('hidden');
-                    }
-                }
-            });
-        }
-
-        if (this.gateFormReg) {
-            this.gateFormReg.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const u = document.getElementById('gate-reg-user').value.trim();
-                const p = document.getElementById('gate-reg-pass').value;
-                const s = document.getElementById('gate-reg-sector').value;
-                const submitBtn = document.getElementById('gate-reg-submit');
-
-                if (!u || !p) return;
-
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.innerHTML = '<span>ENLISTING PILOT...</span>';
-                }
-
-                const res = await window.KuraServer.register(u, p, s);
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<span>ENLIST PILOT & ENTER ARCADE ➔</span>';
-                }
-
-                if (res.success) {
-                    if (window.KuraSounds) window.KuraSounds.synthAccessGrantedSlam();
-                    this.hideAuthGate();
-                    this.updateAuthUI();
-                } else {
-                    if (this.gateError) {
-                        this.gateError.textContent = res.error || 'Registration failed.';
-                        this.gateError.classList.remove('hidden');
-                    }
-                }
-            });
-        }
 
         if (this.navLogoutBtn) {
             this.navLogoutBtn.addEventListener('click', async () => {
@@ -1102,13 +794,13 @@ class ArcadeHub {
     }
 
     async logout() {
-        // Sign out of Firebase Auth session
+        // Sign out of the Google session
         try {
             if (window.KuraFirebase && window.KuraFirebase.signOutUser) {
                 await window.KuraFirebase.signOutUser();
             }
         } catch (err) {
-            console.warn('[KURA AUTH] Firebase signOut error:', err);
+            console.warn('[KURA AUTH] Sign-out error:', err);
         }
 
         // Invalidate backend session token
@@ -1125,7 +817,7 @@ class ArcadeHub {
         if (this.pilotModal) this.pilotModal.classList.remove('active');
         if (this.profileModal) this.profileModal.classList.remove('active');
 
-        this.showAuthGate('Pilot logged out. Please authenticate with Callsign or Google to enter.');
+        this.showAuthGate('Pilot logged out. Please continue with Google to enter.');
         this.updateAuthUI();
     }
 
@@ -1135,17 +827,13 @@ class ArcadeHub {
     initPilotAuth() {
         const openAuthBtn = document.getElementById('open-auth-btn');
         const closeAuthBtn = document.getElementById('close-pilot-modal');
-        const tabLoginBtn = document.getElementById('tab-login-btn');
-        const tabRegBtn = document.getElementById('tab-register-btn');
-        const formLogin = document.getElementById('form-pilot-login');
-        const formReg = document.getElementById('form-pilot-register');
         const errorBanner = document.getElementById('auth-error-msg');
         const gateLoginBtn = document.getElementById('gate-open-login-btn');
         const googleBtn = document.getElementById('btn-google-signin');
         const gateGoogleBtn = document.getElementById('gate-google-signin-btn');
         const mandatoryGoogleBtn = document.getElementById('mandatory-google-signin-btn');
 
-        // Official Firebase Google OAuth Authentication Flow
+        // Google sign-in (the only sign-in method)
         const triggerGoogleAuth = async (e) => {
             if (window.KuraSounds) window.KuraSounds.playClick();
             
@@ -1163,63 +851,14 @@ class ArcadeHub {
 
             try {
                 if (!window.KuraFirebase || !window.KuraFirebase.signInWithGoogle) {
-                    throw new Error('Firebase Auth module initializing. Please retry in a second.');
+                    throw new Error('Google sign-in is still loading. Please try again in a second.');
                 }
 
-                // Call official Firebase Google Popup
                 const authResult = await window.KuraFirebase.signInWithGoogle();
+                // Full-page sign-in: the browser is leaving for Google and comes back signed in
+                if (authResult.success && authResult.redirected) return;
 
                 if (!authResult.success) {
-                    if (authResult.needsConsoleSetup || authResult.code === 'auth/configuration-not-found') {
-                        const consoleHtml = `
-                            <div class="firebase-error-card">
-                                <div class="fb-error-header" style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #fff;">
-                                    <span class="led-status" style="background: #ff2e55; box-shadow: 0 0 8px #ff2e55;"></span>
-                                    <span>FIREBASE CONSOLE SETUP REQUIRED</span>
-                                </div>
-                                <div class="fb-error-desc" style="font-size: 0.78rem; line-height: 1.4; color: #ff8fa3; margin: 4px 0;">
-                                    Google Sign-In is not activated yet in your Firebase Project (<strong>kura-play</strong>).
-                                </div>
-                                <div class="fb-error-steps" style="display: flex; flex-direction: column; gap: 4px; background: rgba(0,0,0,0.4); padding: 8px 10px; border-radius: 4px; border-left: 2px solid #ff2e55; font-size: 11px;">
-                                    <div><strong>1.</strong> Open <a href="https://console.firebase.google.com/project/kura-play/authentication/providers" target="_blank" rel="noopener noreferrer" style="color: #00f3ff; text-decoration: underline;">Firebase Console ➔ Authentication</a></div>
-                                    <div><strong>2.</strong> In <strong>Sign-in method</strong>, click <strong>Google</strong> ➔ toggle <strong>Enable</strong> ➔ Save</div>
-                                    <div><strong>3.</strong> In <strong>Settings &gt; Authorized domains</strong>, verify <code>localhost</code> and <code>kura-play.vercel.app</code></div>
-                                </div>
-                                <div class="fb-fallback-box" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 11px; color: #ccc;">
-                                    <div style="margin-bottom: 6px;">Want to play immediately? Use Callsign login or click below:</div>
-                                    <button type="button" id="btn-quick-gate-enlist" class="gate-btn-submit" style="padding: 8px 12px; font-size: 0.78rem; background: linear-gradient(135deg, #00f3ff, #ff0077); border: none; cursor: pointer; border-radius: 4px; color: #fff; font-weight: bold;">
-                                        ⚡ QUICK PILOT DEMO ACCESS (VIPER_01) ➔
-                                    </button>
-                                </div>
-                            </div>
-                        `;
-                        if (this.gateError) {
-                            this.gateError.innerHTML = consoleHtml;
-                            this.gateError.classList.remove('hidden');
-                            const quickBtn = document.getElementById('btn-quick-gate-enlist');
-                            if (quickBtn) {
-                                quickBtn.addEventListener('click', async () => {
-                                    const u = 'VIPER_01';
-                                    const p = 'kura2026';
-                                    let res = await window.KuraServer.login(u, p);
-                                    if (!res.success) {
-                                        res = await window.KuraServer.register(u, p, 'AIM MATRIX');
-                                    }
-                                    if (res.success) {
-                                        if (window.KuraSounds) window.KuraSounds.synthAccessGrantedSlam();
-                                        this.hideAuthGate();
-                                        this.updateAuthUI();
-                                    }
-                                });
-                            }
-                        }
-                        if (errorBanner) {
-                            errorBanner.innerHTML = consoleHtml;
-                            errorBanner.classList.remove('hidden');
-                        }
-                        return;
-                    }
-
                     const failMsg = authResult.message || 'Google authentication was cancelled or failed.';
                     if (this.gateError) {
                         this.gateError.textContent = failMsg;
@@ -1236,7 +875,7 @@ class ArcadeHub {
                 const cleanName = (fbUser.displayName || fbUser.email.split('@')[0])
                     .trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
 
-                // Synchronize verified Google credentials with SQLite backend
+                // Load or create the pilot profile for this Google account
                 const res = await window.KuraServer.loginWithGoogle({
                     name: cleanName,
                     email: fbUser.email,
@@ -1305,71 +944,6 @@ class ArcadeHub {
             gateLoginBtn.addEventListener('click', () => {
                 this.leaderboardModal.classList.remove('active');
                 this.showAuthGate();
-            });
-        }
-
-        if (tabLoginBtn && tabRegBtn) {
-            tabLoginBtn.addEventListener('click', () => {
-                tabLoginBtn.classList.add('active');
-                tabRegBtn.classList.remove('active');
-                if (formLogin) formLogin.classList.remove('hidden');
-                if (formReg) formReg.classList.add('hidden');
-                if (errorBanner) errorBanner.classList.add('hidden');
-            });
-
-            tabRegBtn.addEventListener('click', () => {
-                tabRegBtn.classList.add('active');
-                tabLoginBtn.classList.remove('active');
-                if (formReg) formReg.classList.remove('hidden');
-                if (formLogin) formLogin.classList.add('hidden');
-                if (errorBanner) errorBanner.classList.add('hidden');
-            });
-        }
-
-        // Handle Modal Login Submission
-        if (formLogin) {
-            formLogin.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const u = document.getElementById('login-username').value;
-                const p = document.getElementById('login-password').value;
-                if (!u || !p) return;
-
-                const res = await window.KuraServer.login(u, p);
-                if (res.success) {
-                    if (window.KuraSounds) window.KuraSounds.synthAccessGrantedSlam();
-                    this.closePilotModal();
-                    this.hideAuthGate();
-                    this.updateAuthUI();
-                } else {
-                    if (errorBanner) {
-                        errorBanner.textContent = res.error || 'Authentication failed.';
-                        errorBanner.classList.remove('hidden');
-                    }
-                }
-            });
-        }
-
-        // Handle Modal Registration Submission
-        if (formReg) {
-            formReg.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const u = document.getElementById('reg-username').value;
-                const p = document.getElementById('reg-password').value;
-                const s = document.getElementById('reg-sector').value;
-                if (!u || !p) return;
-
-                const res = await window.KuraServer.register(u, p, s);
-                if (res.success) {
-                    if (window.KuraSounds) window.KuraSounds.synthSciFiNotification();
-                    this.closePilotModal();
-                    this.hideAuthGate();
-                    this.updateAuthUI();
-                } else {
-                    if (errorBanner) {
-                        errorBanner.textContent = res.error || 'Registration failed.';
-                        errorBanner.classList.remove('hidden');
-                    }
-                }
             });
         }
 
@@ -1552,7 +1126,7 @@ class ArcadeHub {
     }
 
     // ==============================================================
-    // FIREBASE AUTH GLOBAL OBSERVER (SINGLE SOURCE OF TRUTH)
+    // GOOGLE SIGN-IN OBSERVER (SINGLE SOURCE OF TRUTH)
     // ==============================================================
     initFirebaseSessionSync() {
         const handleAuthChange = async (fbUser) => {
@@ -1561,13 +1135,13 @@ class ArcadeHub {
             this.authLoading = false;
 
             if (fbUser) {
-                console.info('⚡ [KURA FIREBASE] Verified Google User Active:', fbUser.email, fbUser.uid);
+                console.info('⚡ [KURA AUTH] Verified Google User Active:', fbUser.email, fbUser.uid);
                 const current = window.KuraServer ? window.KuraServer.currentUser : null;
                 const cleanName = (fbUser.displayName || fbUser.email.split('@')[0])
                     .trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
 
-                // If no active session or session mismatch, synchronize with SQLite backend
-                if (!current || !window.KuraServer.token || (current.email !== fbUser.email && current.provider === 'google')) {
+                // Restore the pilot profile for this Google account
+                if (!current || current.email !== fbUser.email) {
                     const res = await window.KuraServer.loginWithGoogle({
                         name: cleanName,
                         email: fbUser.email,
@@ -1583,16 +1157,14 @@ class ArcadeHub {
                     this.updateAuthUI();
                 }
             } else {
-                console.info('⚡ [KURA FIREBASE] No Firebase user detected.');
+                console.info('⚡ [KURA AUTH] No signed-in Google user.');
                 const current = window.KuraServer ? window.KuraServer.currentUser : null;
-                // If the user's active session was a Google session, but Firebase reported null, force signout
-                if (current && current.provider === 'google') {
+                // Google is the only sign-in method: any leftover local session is cleared
+                if (current) {
                     if (window.KuraServer) window.KuraServer.saveLocalSession(null);
-                    this.showAuthGate('Google session expired. Please sign in again.');
                     this.updateAuthUI();
-                } else if (!current) {
-                    this.showAuthGate();
                 }
+                this.showAuthGate();
             }
         };
 
