@@ -254,70 +254,42 @@ class KuraServerClient {
         return null;
     }
 
-    // Register Pilot (Account Creation)
-    async register(username, password, sector = 'SECTOR 01 // AIM MATRIX') {
-        const cleanUser = username.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
-        if (cleanUser.length < 3 || cleanUser.length > 16) {
-            return { success: false, error: 'Callsign must be 3 to 16 alphanumeric characters.' };
-        }
-        if (!password || password.length < 3) {
-            return { success: false, error: 'Password must be at least 3 characters.' };
-        }
-
-        const res = await this.request('/api/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: cleanUser, password, sector })
-        });
-
-        if (res.ok && res.data.success) {
-            this.saveLocalSession(res.data.user, res.data.token);
-            return { success: true, user: res.data.user, token: res.data.token };
-        }
-
-        return { success: false, error: res.error || 'Registration failed.' };
-    }
-
-    // Login Pilot
-    async login(username, password) {
-        const cleanUser = username.trim().toUpperCase();
-        if (!cleanUser || !password) {
-            return { success: false, error: 'Please enter your callsign and password.' };
-        }
-
-        const res = await this.request('/api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: cleanUser, password })
-        });
-
-        if (res.ok && res.data.success) {
-            this.saveLocalSession(res.data.user, res.data.token);
-            return { success: true, user: res.data.user, token: res.data.token };
-        }
-
-        return { success: false, error: res.error || 'Invalid callsign or password.' };
-    }
-
-    // Unified Firebase Pilot Authentication (Google, Email/Pass, Phone OTP)
-    async loginWithFirebase(profile) {
-        const res = await this.request('/api/auth/firebase', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(profile || {})
-        });
-
-        if (res.ok && res.data.success) {
-            this.saveLocalSession(res.data.user, res.data.token);
-            return { success: true, user: res.data.user, token: res.data.token };
-        }
-
-        return { success: false, error: res.error || 'Firebase authentication failed.' };
-    }
-
-    // Google Pilot Authentication (OAuth / Instant Login)
+    // Google Pilot Authentication (the only sign-in method)
+    // Uses the arcade server when one is running; otherwise keeps the pilot profile in this browser.
     async loginWithGoogle(profile) {
-        return this.loginWithFirebase({ ...profile, provider: 'google' });
+        const p = { ...(profile || {}), provider: 'google' };
+        if (this.isServerOnline) {
+            const res = await this.request('/api/auth/firebase', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(p)
+            });
+            if (res.ok && res.data.success) {
+                this.saveLocalSession(res.data.user, res.data.token);
+                return { success: true, user: res.data.user, token: res.data.token };
+            }
+        }
+
+        const stored = this.loadLocalSession();
+        const sameAccount = stored && stored.uid === p.uid;
+        const name = (p.name || (p.email || '').split('@')[0] || 'PILOT').slice(0, 16) || 'PILOT';
+        const user = sameAccount ? { ...stored, email: p.email || stored.email } : {
+            username: name,
+            sector: 'AIM MATRIX',
+            primary_sector: 'AIM MATRIX',
+            role: 'PILOT',
+            avatar_id: 1,
+            avatar: p.picture || '',
+            bio: '',
+            email: p.email || '',
+            total_games: 0,
+            party_wins: 0,
+            unlocked_medals: '[]',
+            uid: p.uid,
+            provider: 'google'
+        };
+        this.saveLocalSession(user);
+        return { success: true, user };
     }
 
     // Logout Pilot
