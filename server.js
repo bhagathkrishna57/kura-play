@@ -1217,7 +1217,7 @@ const server = http.createServer(async (req, res) => {
     });
 });
 
-if (require.main === module || (!process.env.VERCEL && process.env.NODE_ENV !== 'test')) {
+if (require.main === module) {
     server.listen(PORT, () => {
         console.log('===================================================');
         console.log(`⚡ KURA ARCADE SERVER LIVE AT: http://localhost:${PORT}`);
@@ -1228,4 +1228,6 @@ if (require.main === module || (!process.env.VERCEL && process.env.NODE_ENV !== 
     });
 }
 
-module.exports = server;
+// Vercel serverless handler export
+module.exports = (req, res) => server.emit('request', req, res);
+module.exports.server = server;
