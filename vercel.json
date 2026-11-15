@@ -6,7 +6,19 @@
       "use": "@vercel/node"
     },
     {
-      "src": "**",
+      "src": "index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "css/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "js/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "firebase.js",
       "use": "@vercel/static"
     }
   ],
@@ -16,8 +28,20 @@
       "dest": "/server.js"
     },
     {
+      "src": "/css/(.*)",
+      "dest": "/css/$1"
+    },
+    {
+      "src": "/js/(.*)",
+      "dest": "/js/$1"
+    },
+    {
+      "src": "/firebase.js",
+      "dest": "/firebase.js"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/$1"
+      "dest": "/index.html"
     }
   ]
 }
