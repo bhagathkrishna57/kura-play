@@ -20,6 +20,9 @@
     "url": "https://github.com/bhagathkrishna57/kura-play/issues"
   },
   "homepage": "https://github.com/bhagathkrishna57/kura-play#readme",
+  "engines": {
+    "node": ">=22.5.0"
+  },
   "dependencies": {
     "firebase": "^13.3.0"
   }
