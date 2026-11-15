@@ -6,33 +6,32 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { DatabaseSync } = require('node:sqlite');
 
 const PORT = process.env.PORT || 3000;
 const isVercel = !!process.env.VERCEL;
-const DATA_DIR = isVercel ? '/tmp/kura_data' : path.join(__dirname, 'data');
+const DATA_DIR = isVercel ? path.join('/tmp', 'kura_data') : path.join(__dirname, 'data');
 const DB_PATH = path.join(DATA_DIR, 'kura_arcade.db');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const LEADERBOARD_FILE = path.join(DATA_DIR, 'leaderboard.json');
 
-// Ensure writable data directory exists
+// Ensure data directory exists
 if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// Seed DB from committed file on Vercel cold start
+// If on Vercel and db doesn't exist in /tmp, seed from committed database
 if (isVercel && !fs.existsSync(DB_PATH)) {
     const seedDb = path.join(__dirname, 'data', 'kura_arcade.db');
     if (fs.existsSync(seedDb)) {
-        try { fs.copyFileSync(seedDb, DB_PATH); } catch (e) { console.warn('[KURA] DB seed copy failed:', e.message); }
+        try { fs.copyFileSync(seedDb, DB_PATH); } catch (e) {}
     }
 }
 
-// Initialize SQLite with better-sqlite3 (prebuilt binaries for Node 20 Linux x64)
-const Database = require('better-sqlite3');
-const db = new Database(DB_PATH);
+// Initialize SQLite Database
+const db = new DatabaseSync(DB_PATH);
 db.exec('PRAGMA journal_mode = WAL;');
 db.exec('PRAGMA foreign_keys = ON;');
-console.log('[KURA] SQLite ready at', DB_PATH);
 
 // Initialize Tables
 db.exec(`
@@ -1218,7 +1217,7 @@ const server = http.createServer(async (req, res) => {
     });
 });
 
-if (require.main === module) {
+if (require.main === module || (!process.env.VERCEL && process.env.NODE_ENV !== 'test')) {
     server.listen(PORT, () => {
         console.log('===================================================');
         console.log(`⚡ KURA ARCADE SERVER LIVE AT: http://localhost:${PORT}`);
@@ -1229,6 +1228,4 @@ if (require.main === module) {
     });
 }
 
-// Vercel serverless handler export
-module.exports = (req, res) => server.emit('request', req, res);
-module.exports.server = server;
+module.exports = server;
