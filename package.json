@@ -24,6 +24,7 @@
     "node": ">=22.5.0"
   },
   "dependencies": {
+    "better-sqlite3": "^11.5.0",
     "firebase": "^13.3.0"
   }
 }

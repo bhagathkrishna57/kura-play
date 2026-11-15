@@ -6,7 +6,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { DatabaseSync } = require('node:sqlite');
+const Database = require('better-sqlite3');
 
 const PORT = process.env.PORT || 3000;
 const isVercel = !!process.env.VERCEL;
@@ -29,7 +29,7 @@ if (isVercel && !fs.existsSync(DB_PATH)) {
 }
 
 // Initialize SQLite Database
-const db = new DatabaseSync(DB_PATH);
+const db = new Database(DB_PATH);
 db.exec('PRAGMA journal_mode = WAL;');
 db.exec('PRAGMA foreign_keys = ON;');
 
