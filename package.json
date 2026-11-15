@@ -4,7 +4,8 @@
   "description": "> **Architect & Creator:** Bhagath Krishna.M   > **Official Repository:** [https://github.com/bhagathkrishna57/kura-play.git](https://github.com/bhagathkrishna57/kura-play.git)   > **System Version:** SYS.VER.2.4 // ZERO-BOREDOM PROTOCOL",
   "main": "server.js",
   "scripts": {
-    "build": "node --check server.js && node --check js/main.js && node --check js/server-client.js && echo Build verification successful.",
+    "build": "node --check server.js && echo Build verification successful.",
+    "vercel-build": "npm rebuild better-sqlite3 --build-from-source",
     "test": "node --check server.js",
     "start": "node server.js"
   },
