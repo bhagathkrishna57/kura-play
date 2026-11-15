@@ -6,32 +6,44 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const Database = require('better-sqlite3');
 
 const PORT = process.env.PORT || 3000;
 const isVercel = !!process.env.VERCEL;
-const DATA_DIR = isVercel ? path.join('/tmp', 'kura_data') : path.join(__dirname, 'data');
+const DATA_DIR = isVercel ? '/tmp/kura_data' : path.join(__dirname, 'data');
 const DB_PATH = path.join(DATA_DIR, 'kura_arcade.db');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const LEADERBOARD_FILE = path.join(DATA_DIR, 'leaderboard.json');
 
-// Ensure data directory exists
+// Ensure /tmp/kura_data exists on Vercel (only /tmp is writable)
 if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// If on Vercel and db doesn't exist in /tmp, seed from committed database
+// Seed DB from committed file on Vercel cold start
 if (isVercel && !fs.existsSync(DB_PATH)) {
     const seedDb = path.join(__dirname, 'data', 'kura_arcade.db');
     if (fs.existsSync(seedDb)) {
-        try { fs.copyFileSync(seedDb, DB_PATH); } catch (e) {}
+        try { fs.copyFileSync(seedDb, DB_PATH); } catch (e) { console.warn('[KURA] DB seed copy failed:', e.message); }
     }
 }
 
-// Initialize SQLite Database
-const db = new Database(DB_PATH);
-db.exec('PRAGMA journal_mode = WAL;');
-db.exec('PRAGMA foreign_keys = ON;');
+// Initialize SQLite — wrapped in try/catch so a binary error gives a clear log
+let db;
+try {
+    const Database = require('better-sqlite3');
+    db = new Database(DB_PATH);
+    db.exec('PRAGMA journal_mode = WAL;');
+    db.exec('PRAGMA foreign_keys = ON;');
+    console.log('[KURA] SQLite ready at', DB_PATH);
+} catch (err) {
+    console.error('[KURA] FATAL: SQLite init failed:', err.message);
+    // Export a simple error handler so Vercel returns 500 instead of 404
+    module.exports = (_req, res) => {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Database init failed: ' + err.message);
+    };
+    return;
+}
 
 // Initialize Tables
 db.exec(`
